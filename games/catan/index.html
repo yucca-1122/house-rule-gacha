@@ -1,4 +1,11 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"></head><body>
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" type="image/png" sizes="32x32" href="../../assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="../../assets/icon-192.png">
+<link rel="apple-touch-icon" type="image/png" sizes="180x180" href="../../assets/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="カタンガチャ">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#1d6a90">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b1e2a">
+</head><body>
 <title>カタン改造ルールガチャ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -295,6 +302,9 @@ a { color: inherit; }
   color: var(--on-sea);
 }
 @media (max-width: 359px) { .tab-count { display: none; } }
+/* タブが4つ（持ち時間あり）のスマホ: 高さは変えず、横の余白だけ詰める */
+@media (max-width: 719px) { .tabs--4 .tab { padding-inline: 8px; } }
+@media (max-width: 379px) { .tabs--4 .tab { padding-inline: 5px; } }
 @media (min-width: 720px) {
   .tabs { display: inline-flex; }
   .tab { flex: 0 0 auto; padding-inline: 20px; }
@@ -693,6 +703,36 @@ a { color: inherit; }
 .hist-empty { margin: 0; font-size: 13px; color: var(--on-sea-dim); }
 .hist-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 
+/* ---------- 持ち時間 ---------- */
+.timer {
+  display: grid;
+  gap: 26px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "tset" "tcur" "tlist";
+}
+.t-set { grid-area: tset; display: grid; gap: 16px; align-content: start; min-width: 0; }
+.t-cur { grid-area: tcur; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.t-list { grid-area: tlist; display: grid; gap: 12px; align-content: start; min-width: 0; }
+@media (min-width: 980px) {
+  .timer {
+    grid-template-columns: 352px minmax(0, 1fr);
+    grid-template-areas: "tset tcur" "tlist tlist";
+    column-gap: 36px;
+    align-items: start;
+  }
+}
+.timer-base { display: flex; align-items: center; gap: 12px; }
+.timer-base svg { width: 44px; height: 44px; flex: none; color: var(--wheat); }
+.timer-base-text { margin: 0; display: grid; gap: 2px; min-width: 0; }
+.timer-base-lead { font-size: 13px; font-weight: 700; line-height: 1.4; color: var(--on-sea-dim); }
+.timer-base-main { font-family: var(--font-display); font-weight: 400; font-size: 30px; line-height: 1.15; letter-spacing: .02em; color: var(--on-sea); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.timer-howto { margin: -4px 0 0; font-size: 13.5px; line-height: 1.7; color: var(--on-sea-dim); }
+.timer-now { display: grid; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 640px) { .timer-now { grid-template-columns: minmax(0, 640px); } }
+.timer-empty { display: grid; gap: 4px; padding: 18px 16px; border: 2px dashed var(--on-sea-line); border-radius: 14px; }
+.timer-empty p { margin: 0; }
+.timer-empty-main { font-family: var(--font-display); font-weight: 400; font-size: 22px; line-height: 1.3; color: var(--on-sea); font-variant-numeric: tabular-nums; }
+
 /* ---------- ぜんぶ見る ---------- */
 .list-filter { display: grid; gap: 12px; margin-bottom: 16px; }
 .search { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 14px; border-radius: 12px; background: var(--paper); color: var(--ink); cursor: text; }
@@ -811,6 +851,7 @@ a { color: inherit; }
     <div class="tabbar" id="tabbar">
       <div class="tabs" id="tabs" role="tablist" aria-label="画面のきりかえ">
         <button type="button" class="tab" role="tab" id="tab-gacha" aria-controls="panel-gacha" aria-selected="true">ガチャ</button>
+        <button type="button" class="tab" role="tab" id="tab-timer" aria-controls="panel-timer" aria-selected="false" tabindex="-1" hidden>持ち時間</button>
         <button type="button" class="tab" role="tab" id="tab-list" aria-controls="panel-list" aria-selected="false" tabindex="-1">ぜんぶ見る<span class="tab-count" id="tab-list-count"></span></button>
         <button type="button" class="tab" role="tab" id="tab-howto" aria-controls="panel-howto" aria-selected="false" tabindex="-1">遊び方</button>
       </div>
@@ -889,6 +930,53 @@ a { color: inherit; }
         </div>
       </section>
 
+      <!-- 持ち時間（rules.js に timer があるゲームだけ） -->
+      <section class="panel timer" id="panel-timer" role="tabpanel" aria-labelledby="tab-timer" hidden>
+        <div class="t-set">
+          <h2 class="sr-only" id="timer-title">持ち時間ガチャ</h2>
+          <div class="timer-base">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7.8" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 13.5V9.4M9.6 2.6h4.8M12 2.6v3.1M18.3 6.9l1.5-1.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            <p class="timer-base-text"><span class="timer-base-lead" id="timer-base-lead"></span><span class="timer-base-main" id="timer-base-main"></span></p>
+          </div>
+          <p class="timer-howto" id="timer-howto" hidden></p>
+          <div class="field">
+            <p class="field-label" id="timer-lv-label">難易度</p>
+            <div class="lv-row" id="timer-lv-row" role="group" aria-labelledby="timer-lv-label"></div>
+          </div>
+          <p class="set-hint" id="timer-hint" role="status" aria-live="polite"></p>
+          <button type="button" class="spin" id="timer-spin"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7.8" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 13.5V9.4M9.6 2.6h4.8M12 2.6v3.1M18.3 6.9l1.5-1.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><span id="timer-spin-label">持ち時間ガチャを回す</span></button>
+          <p class="pool-line" id="timer-pool-line" aria-live="polite"></p>
+        </div>
+
+        <div class="t-cur">
+          <div class="hand-head" id="timer-head">
+            <h2 class="hand-title">いまの持ち時間</h2>
+          </div>
+          <div class="hand-tools">
+            <div class="hand-btns">
+              <button type="button" class="btn btn-paper" id="timer-copy"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 8.5V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7.5a2 2 0 0 0 2 2h2.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>テキストでコピー</button>
+            </div>
+          </div>
+          <p class="tool-msg" id="timer-msg" role="status" aria-live="polite"></p>
+          <div class="copy-fallback" id="timer-copy-fallback-box" hidden>
+            <p class="copy-fallback-lead">コピーできなかったので、下の文字を長押しでコピーしてね</p>
+            <label class="sr-only" for="timer-copy-fallback">コピーする文章</label>
+            <textarea id="timer-copy-fallback" rows="8" spellcheck="false"></textarea>
+            <button type="button" class="btn btn-sea-line btn-sm" id="timer-copy-fallback-close">閉じる</button>
+          </div>
+          <p class="notice" id="timer-notice" role="status" aria-live="polite" hidden></p>
+          <div class="timer-now" id="timer-now"></div>
+        </div>
+
+        <div class="t-list">
+          <div class="hand-head">
+            <h2 class="hand-title">持ち時間のカード</h2>
+            <span class="hand-count" id="timer-list-count"></span>
+          </div>
+          <div class="list-grid" id="timer-grid"></div>
+        </div>
+      </section>
+
       <!-- ぜんぶ見る -->
       <section class="panel" id="panel-list" role="tabpanel" aria-labelledby="tab-list" hidden>
         <h2 class="sr-only">ぜんぶのルール</h2>
@@ -929,6 +1017,7 @@ a { color: inherit; }
               <ol class="steps">
                 <li><span>難易度・枚数<span id="step-players">・人数</span>を選んで、<b>「ガチャを回す」</b>を押す。</span></li>
                 <li><span>気に入らないカードは<b>「引き直す」</b>、使わないカードは<b>「外す」</b>。好きなルールは「ぜんぶ見る」から入れられるよ。</span></li>
+                <li id="step-timer" hidden><span>持ち時間も変えるなら、「持ち時間」タブで<b>「<span id="step-timer-name">持ち時間ガチャ</span>を回す」</b>。使うのは1枚だけ。</span></li>
                 <li><span>決まったら<b>「テキストでコピー」</b>で LINE に貼って、みんなで読もう。</span></li>
                 <li><span>遊んでいる間は<b>「画面をつけたままにする」</b>をオンにして机に置いておこう。途中でルールを増やすときは「1枚足す」。</span></li>
               </ol>
@@ -970,7 +1059,8 @@ a { color: inherit; }
   const HISTORY_MAX = 20;      // 履歴に残す回数
   const RECENT_N = 3;          // 「直近◯回」に出たルールはなるべく避ける
   const OTHER = '__other';     // cats に無いジャンルのルールの置き場
-  const TABS = ['gacha', 'list', 'howto'];
+  const ALL_TABS = ['gacha', 'timer', 'list', 'howto'];   // 持ち時間は timer があるゲームだけ
+  const TIMER_HISTORY_MAX = 10;   // 持ち時間の履歴に残す枚数
   const LIST_MIN_W = 290;      // ぜんぶ見るの1列の最小幅
   const LIST_GAP = 14;
   const motionQuery = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
@@ -1063,6 +1153,37 @@ a { color: inherit; }
     }
     return o;
   }
+  // 持ち時間のカード（timer.cards）。番号は T01 の形、難易度の名前と色はルールと同じ levels を使う
+  function readTimerData(t) {
+    if (!t || typeof t !== 'object' || !Array.isArray(t.cards)) return null;
+    let maxId = 0;
+    t.cards.forEach((c) => { if (c && Number.isInteger(Number(c.id))) maxId = Math.max(maxId, Number(c.id)); });
+    const used = new Set();
+    const cards = [];
+    t.cards.forEach((c) => {
+      if (!c || typeof c !== 'object') return;
+      let id = Number(c.id);
+      if (!Number.isInteger(id) || id < 0 || used.has(id)) id = ++maxId;
+      used.add(id);
+      cards.push({
+        id, lv: clampLv(c.lv), cat: '', title: str(c.title) || '（名前のないカード）', text: str(c.text), list: [],
+        note: str(c.note), need: str(c.need), p: 0, x: [], req: [], ban: [],
+        noLabel: 'T' + String(id).padStart(2, '0'), tagLabel: '持ち時間',
+      });
+    });
+    if (!cards.length) return null;
+    cards.sort((a, b) => a.id - b.id);
+    const base = str(t.base);
+    const m = base.match(/^(.*\S)[\s\u3000]+(\S+)$/);   // 「ふだんの持ち時間は 1手番20秒」→ 前と、大きく出す「1手番20秒」
+    const startLv = intList(t.startLv).filter((v) => v <= 5);
+    return {
+      title: str(t.title) || '持ち時間ガチャ',
+      base, baseLead: m ? m[1] : '', baseMain: m ? m[2] : base,
+      howto: str(t.howto),
+      cards, byId: new Map(cards.map((c) => [c.id, c])),
+      startLv: startLv.length ? startLv : [1, 2, 3],
+    };
+  }
   function normalize(src) {
     if (!src || typeof src !== 'object') return { error: 'missing' };
     if (!Array.isArray(src.rules)) return { error: 'norules' };
@@ -1131,6 +1252,7 @@ a { color: inherit; }
       catMap,
       rules,
       byId: new Map(rules.map((r) => [r.id, r])),
+      timer: readTimerData(src.timer),
       basics: Array.isArray(src.basics) ? src.basics.filter((b) => b && typeof b === 'object') : [],
       combos: Array.isArray(src.combos) ? src.combos.filter((c) => c && typeof c === 'object') : [],
     };
@@ -1145,7 +1267,7 @@ a { color: inherit; }
     $('load-error-detail').textContent = detail;
     $('load-error').hidden = false;
     $('tabbar').hidden = true;
-    TABS.forEach((t) => { $('panel-' + t).hidden = true; });
+    ALL_TABS.forEach((t) => { $('panel-' + t).hidden = true; });
     $('app-sub').textContent = 'ルールのデータを待っているよ';
   }
 
@@ -1166,6 +1288,8 @@ a { color: inherit; }
   const PLAYERS = D.players;    // 人数の選択肢（2つ以上のときだけ行を出す）
   // 保存はゲームごと（同じ場所に複数のゲームを置いても混ざらない）
   const STORE_KEY = 'house-rule-gacha:' + D.id + ':v1';
+  const T = D.timer;            // 持ち時間（無いゲームは null。タブも出さない）
+  const TABS = T ? ALL_TABS : ALL_TABS.filter((t) => t !== 'timer');
 
   // ---------- 保存（できなくても動く） ----------
   function loadSaved() {
@@ -1221,10 +1345,25 @@ a { color: inherit; }
   let hand = readHand(saved && saved.hand);       // いまのルール
   let hist = readHistory(saved && saved.history); // これまでの組み合わせ（新しい順）
   let tab = saved && TABS.includes(saved.tab) ? saved.tab : 'gacha';
+  // いまの持ち時間・持ち時間の難易度・直近の履歴（前の版の保存に無くても、初期の値で始める）
+  function readTimer(t) {
+    const o = { cur: null, lv: T ? T.startLv.slice() : [], hist: [] };
+    if (!T || !t || typeof t !== 'object') return o;
+    if (T.byId.has(Number(t.cur))) o.cur = Number(t.cur);
+    if (Array.isArray(t.lv)) {
+      const lv = [...new Set(t.lv.map(Number).filter((v) => Number.isInteger(v) && v >= 1 && v <= 5))].sort((a, b) => a - b);
+      if (lv.length) o.lv = lv;
+    }
+    if (Array.isArray(t.hist)) o.hist = [...new Set(t.hist.map(Number).filter((id) => T.byId.has(id)))].slice(0, TIMER_HISTORY_MAX);
+    return o;
+  }
+  const tstate = readTimer(saved && saved.timer);
 
   function save() {
     try {
-      localStorage.setItem(STORE_KEY, JSON.stringify({ v: 1, settings, hand, history: hist, tab }));
+      const data = { v: 1, settings, hand, history: hist, tab };
+      if (T) data.timer = tstate;
+      localStorage.setItem(STORE_KEY, JSON.stringify(data));
     } catch (e) { /* 保存できなくても続ける */ }
   }
 
@@ -1307,10 +1446,10 @@ a { color: inherit; }
     if (r.lv < 5) stars.append(el('span', 'stars-off', '★'.repeat(5 - r.lv)));
     strip.append(stars, el('span', 'sr-only', '難易度★' + r.lv));
     if (lvName(r.lv)) strip.append(el('span', 'card-lv', lvName(r.lv)));
-    strip.append(el('span', 'card-no', noStr(r.id)));
+    strip.append(el('span', 'card-no', r.noLabel || noStr(r.id)));
     const body = el('div', 'card-body');
     const tags = el('div', 'card-tags');
-    tags.append(el('span', 'tag', catName(r.cat)));
+    tags.append(el('span', 'tag', r.tagLabel || catName(r.cat)));
     if (r.p) tags.append(el('span', 'tag tag-p', r.p + '人専用'));
     body.append(tags, el('h3', 'card-title', r.title));
     if (r.text) body.append(el('p', 'card-text', r.text));
@@ -1382,8 +1521,8 @@ a { color: inherit; }
     box.dataset.n = String(rules.length);
     $('hand-count').textContent = rules.length ? rules.length + '枚' : '';
     $('hand-empty').hidden = rules.length > 0;
-    $('copy-text').disabled = rules.length === 0;
-    $('copy-fallback-box').hidden = true;
+    updateCopyButtons();
+    hideCopyFallbacks();
     const animate = opts.deal != null && !reduced();
     const base = opts.baseDelay || 0;
     rules.forEach((r, i) => {
@@ -1491,7 +1630,8 @@ a { color: inherit; }
   // ---------- テキストでコピー ----------
   function handText() {
     const rules = handRules();
-    if (!rules.length) return '';
+    const tc = timerCard();
+    if (!rules.length && !tc) return '';
     const out = ['【' + D.copyTitle + '】'];
     rules.forEach((r, i) => {
       out.push('');
@@ -1501,34 +1641,48 @@ a { color: inherit; }
       if (r.need) out.push('用意するもの：' + r.need);
       if (r.p) out.push('※' + r.p + '人専用');
     });
+    if (tc) {
+      out.push('');
+      out.push('【持ち時間】' + tc.noLabel + ' ' + tc.title + '（' + lvLabel(tc.lv) + '）');
+      if (tc.text) out.push(tc.text);
+      if (tc.need) out.push('用意するもの：' + tc.need);
+    }
     return out.join('\n');
   }
-  function copyFallback(text) {
-    const box = $('copy-fallback-box');
-    const ta = $('copy-fallback');
-    ta.value = text;
-    ta.rows = Math.min(16, Math.max(6, text.split('\n').length + 1));
-    box.hidden = false;
-    toolMsg('');
-    try { ta.focus({ preventScroll: true }); } catch (e) { ta.focus(); }
-    ta.select();
-    try { ta.setSelectionRange(0, text.length); } catch (e) { /* 古い端末 */ }
+  function copyFallback(text, ui) {
+    ui.ta.value = text;
+    ui.ta.rows = Math.min(16, Math.max(6, text.split('\n').length + 1));
+    ui.box.hidden = false;
+    ui.msg('');
+    try { ui.ta.focus({ preventScroll: true }); } catch (e) { ui.ta.focus(); }
+    ui.ta.select();
+    try { ui.ta.setSelectionRange(0, text.length); } catch (e) { /* 古い端末 */ }
   }
-  $('copy-text').addEventListener('click', () => {
+  function doCopy(ui) {
     const text = handText();
     if (!text) return;
-    $('copy-fallback-box').hidden = true;
+    ui.box.hidden = true;
     let p = null;
     try {
       if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') p = navigator.clipboard.writeText(text);
     } catch (e) { p = null; }
-    if (!p || typeof p.then !== 'function') { copyFallback(text); return; }
-    p.then(() => toolMsg('コピーしたよ。LINE に貼りつけてね'), () => copyFallback(text));
+    if (!p || typeof p.then !== 'function') { copyFallback(text, ui); return; }
+    p.then(() => ui.msg('コピーしたよ。LINE に貼りつけてね'), () => copyFallback(text, ui));
+  }
+  const COPY_UIS = [
+    { btn: $('copy-text'), box: $('copy-fallback-box'), ta: $('copy-fallback'), close: $('copy-fallback-close'), msg: toolMsg },
+    { btn: $('timer-copy'), box: $('timer-copy-fallback-box'), ta: $('timer-copy-fallback'), close: $('timer-copy-fallback-close'), msg: (t) => timerMsg(t) },
+  ];
+  COPY_UIS.forEach((ui) => {
+    ui.btn.addEventListener('click', () => doCopy(ui));
+    ui.close.addEventListener('click', () => { ui.box.hidden = true; ui.btn.focus(); });
   });
-  $('copy-fallback-close').addEventListener('click', () => {
-    $('copy-fallback-box').hidden = true;
-    $('copy-text').focus();
-  });
+  // コピーする中身が変わったら、出しっぱなしの手作業用の文は引っこめる
+  function hideCopyFallbacks() { COPY_UIS.forEach((ui) => { ui.box.hidden = true; }); }
+  function updateCopyButtons() {
+    const none = !handRules().length && !timerCard();
+    COPY_UIS.forEach((ui) => { ui.btn.disabled = none; });
+  }
 
   // ---------- 画面をつけたままにする ----------
   const wakeBox = $('wake-toggle');
@@ -1814,6 +1968,19 @@ a { color: inherit; }
     $('list-cat-summary').textContent = listF.cat.size ? listF.cat.size + 'つにしぼり中' : 'しぼらない';
   }
   const colsFor = (w) => Math.max(1, Math.min(4, Math.floor((w + LIST_GAP) / (LIST_MIN_W + LIST_GAP))));
+  // 列に分けて、左上から番号順に横へ並べる（列の数を返す）
+  function fillColumns(grid, nodes) {
+    const n = colsFor(grid.clientWidth);
+    grid.textContent = '';
+    const cols = [];
+    for (let i = 0; i < n; i++) {
+      const c = el('div', 'list-col');
+      grid.append(c);
+      cols.push(c);
+    }
+    nodes.forEach((node, i) => cols[i % n].append(node));
+    return n;
+  }
   function layoutList() {
     if ($('panel-list').hidden) return;
     const terms = fold(listF.q).split(/\s+/).filter(Boolean);
@@ -1825,17 +1992,7 @@ a { color: inherit; }
       if (terms.length && !terms.every((t) => r.hay.includes(t))) return;
       vis.push(it);
     });
-    const grid = $('list-grid');
-    const n = colsFor(grid.clientWidth);
-    grid.textContent = '';
-    const cols = [];
-    for (let i = 0; i < n; i++) {
-      const c = el('div', 'list-col');
-      grid.append(c);
-      cols.push(c);
-    }
-    vis.forEach((it, i) => cols[i % n].append(it.card));   // 左上から No. 順に横へ並べる
-    listCols = n;
+    listCols = fillColumns($('list-grid'), vis.map((it) => it.card));
     const cnt = $('list-count');
     cnt.textContent = '';
     cnt.append(el('b', null, String(vis.length)), '件');
@@ -1845,9 +2002,13 @@ a { color: inherit; }
   }
   function relayoutIfNeeded() {
     if (!$('panel-list').hidden && colsFor($('list-grid').clientWidth) !== listCols) layoutList();
+    if (T && !$('panel-timer').hidden && colsFor($('timer-grid').clientWidth) !== timerCols) layoutTimerList();
   }
-  if ('ResizeObserver' in window) new ResizeObserver(relayoutIfNeeded).observe($('list-grid'));
-  else window.addEventListener('resize', relayoutIfNeeded);
+  if ('ResizeObserver' in window) {
+    const ro = new ResizeObserver(relayoutIfNeeded);
+    ro.observe($('list-grid'));
+    ro.observe($('timer-grid'));
+  } else window.addEventListener('resize', relayoutIfNeeded);
 
   function refreshListMarks() {
     listItems.forEach((it) => {
@@ -1872,6 +2033,194 @@ a { color: inherit; }
     let t = 'いまのルールに入れたよ（' + hand.ids.length + '枚目）';
     if (r.p && settings.players && r.p !== settings.players) t += '。' + r.p + '人専用のルールだよ（ガチャの人数は' + settings.players + '人）';
     say(it.msg, t, 'ok');
+  }
+
+  // ---------- 持ち時間 ----------
+  const timerCard = () => (T && tstate.cur ? T.byId.get(tstate.cur) || null : null);
+  const timerItems = new Map();   // id → { c, card, btn, msg }
+  let timerCols = 0;
+  let timerHintTimer = 0;
+  function timerHint(text) {
+    const h = $('timer-hint');
+    clearTimeout(timerHintTimer);
+    h.textContent = text || '';
+    if (text) timerHintTimer = setTimeout(() => { h.textContent = ''; }, 4000);
+  }
+  let timerMsgTimer = 0;
+  function timerMsg(text) {
+    const n = $('timer-msg');
+    clearTimeout(timerMsgTimer);
+    n.textContent = text || '';
+    if (text) timerMsgTimer = setTimeout(() => { n.textContent = ''; }, 6000);
+  }
+  function timerNotice(text) {
+    const n = $('timer-notice');
+    n.textContent = text || '';
+    n.hidden = !text;
+  }
+  const timerPool = () => T.cards.filter((c) => tstate.lv.includes(c.lv));
+  // 1枚引く。直近3回に出たもの（いまの1枚もふくむ）は、ほかが無いときだけ使う
+  function timerDraw(excludeCur) {
+    let cands = timerPool();
+    if (excludeCur) cands = cands.filter((c) => c.id !== tstate.cur);
+    if (!cands.length) return { card: null, stale: false };
+    const avoid = new Set(tstate.hist.slice(0, RECENT_N));
+    if (tstate.cur) avoid.add(tstate.cur);
+    const fresh = cands.filter((c) => !avoid.has(c.id));
+    const from = fresh.length ? fresh : cands;
+    return { card: from[Math.floor(Math.random() * from.length)], stale: !fresh.length };
+  }
+  function setTimer(c) {
+    tstate.cur = c ? c.id : null;
+    if (c) tstate.hist = [c.id].concat(tstate.hist.filter((h) => h !== c.id)).slice(0, TIMER_HISTORY_MAX);
+    save();
+    refreshTimerMarks();
+  }
+  function toggleTimerLv(lv) {
+    const on = tstate.lv.includes(lv);
+    if (on && tstate.lv.length === 1) { timerHint('難易度は1つ以上オンにしておこう'); return; }
+    tstate.lv = on ? tstate.lv.filter((v) => v !== lv) : tstate.lv.concat(lv).sort((a, b) => a - b);
+    timerHint('');
+    save();
+    renderTimerSettings();
+  }
+  function renderTimerSettings() {
+    for (let lv = 1; lv <= 5; lv++) {
+      const b = $('timer-lv-' + lv);
+      b.setAttribute('aria-pressed', String(tstate.lv.includes(lv)));
+      b.querySelector('.lv-count').textContent = T.cards.filter((c) => c.lv === lv).length + '種';
+    }
+    const k = timerPool().length;
+    $('timer-spin').disabled = k === 0;
+    const line = $('timer-pool-line');
+    line.textContent = '';
+    if (!k) line.append('いまの条件だと、引けるカードがないよ');
+    else line.append('いまの条件で', el('b', null, String(k)), '種から1枚引くよ');
+  }
+  // いまの持ち時間（引いていないときは、ふだんの持ち時間のまま）
+  function renderTimerNow(opts) {
+    opts = opts || {};
+    const box = $('timer-now');
+    box.textContent = '';
+    hideCopyFallbacks();
+    updateCopyButtons();
+    const c = timerCard();
+    if (!c) {
+      const e = el('div', 'timer-empty');
+      const p1 = el('p');
+      p1.append(el('b', null, 'まだ引いていないよ。'));
+      const p2 = el('p');
+      if (T.baseMain) p2.append('ふだんどおり ', el('span', 'timer-empty-main', T.baseMain));
+      else p2.append('ふだんどおりの持ち時間で遊ぼう');
+      e.append(p1, p2);
+      box.append(e);
+      if (opts.focus) { try { $('timer-spin').focus({ preventScroll: true }); } catch (er) { $('timer-spin').focus(); } }
+      return;
+    }
+    const slot = el('div', 'slot');
+    const { card, body } = buildCard(c, false);
+    const actions = el('div', 'card-actions');
+    const rb = button('btn btn-line', '引き直す', 'timer-reroll');
+    rb.dataset.act = 'reroll';
+    const xb = button('btn btn-quiet', '外す', 'timer-remove');
+    xb.dataset.act = 'remove';
+    actions.append(rb, xb);
+    const msg = el('p', 'card-msg');
+    msg.id = 'timer-card-msg';
+    msg.setAttribute('role', 'status');
+    msg.hidden = true;
+    body.append(actions, msg);
+    slot.append(card);
+    if (opts.deal && !reduced()) deal(slot, card, opts.baseDelay || 0);
+    box.append(slot);
+    if (opts.focus) { const t = $('timer-' + opts.focus); if (t) { try { t.focus({ preventScroll: true }); } catch (er) { t.focus(); } } }
+  }
+  function refreshTimerMarks() {
+    timerItems.forEach((it) => {
+      const now = tstate.cur === it.c.id;
+      it.btn.textContent = now ? 'いまの持ち時間' : 'これにする';
+      it.btn.classList.toggle('is-in', now);
+    });
+  }
+  function layoutTimerList() {
+    if (!T || $('panel-timer').hidden) return;
+    timerCols = fillColumns($('timer-grid'), T.cards.map((c) => timerItems.get(c.id).card));
+  }
+  function showTimerHead() {
+    const head = $('timer-head');
+    if (needScrollTo(head)) { scrollToNode(head, 'start'); return true; }
+    return false;
+  }
+  function buildTimer() {
+    if (!T) return;
+    $('tab-timer').hidden = false;
+    $('tabs').classList.add('tabs--4');
+    $('step-timer').hidden = false;
+    $('step-timer-name').textContent = T.title;
+    $('timer-title').textContent = T.title;
+    $('timer-spin-label').textContent = T.title + 'を回す';
+    $('timer-base-lead').textContent = T.baseLead;
+    $('timer-base-lead').hidden = !T.baseLead;
+    $('timer-base-main').textContent = T.baseMain;
+    $('timer-howto').textContent = T.howto;
+    $('timer-howto').hidden = !T.howto;
+    const row = $('timer-lv-row');
+    for (let lv = 1; lv <= 5; lv++) {
+      const b = button('lv-toggle', null, 'timer-lv-' + lv);
+      b.dataset.lv = String(lv);
+      b.append(lvTile(lv), el('span', 'sr-only', '★' + lv), el('span', 'lv-name', lvName(lv)), el('span', 'lv-count'));
+      b.addEventListener('click', () => toggleTimerLv(lv));
+      row.append(b);
+    }
+    T.cards.forEach((c) => {
+      const { card, body } = buildCard(c, true);
+      const actions = el('div', 'card-actions');
+      const b = button('btn btn-line', 'これにする', 'timer-pick-' + c.id);
+      b.dataset.id = String(c.id);
+      actions.append(b);
+      const msg = el('p', 'card-msg');
+      msg.setAttribute('role', 'status');
+      msg.hidden = true;
+      body.append(actions, msg);
+      timerItems.set(c.id, { c, card, btn: b, msg });
+    });
+    $('timer-list-count').textContent = T.cards.length + '種';
+    $('timer-spin').addEventListener('click', () => {
+      const { card, stale } = timerDraw(false);
+      if (!card) { timerNotice('いまの条件だと引けるカードがないよ。難易度を増やしてみて'); return; }
+      setTimer(card);
+      timerNotice(stale ? '候補が少ないから、最近出たカードもまぜたよ' : '');
+      const scroll = needScrollTo($('timer-head'));
+      renderTimerNow({ deal: true, baseDelay: scroll ? 260 : 0 });
+      if (scroll) scrollToNode($('timer-head'), 'start');
+    });
+    $('timer-now').addEventListener('click', (ev) => {
+      const b = ev.target.closest('button[data-act]');
+      if (!b) return;
+      if (b.dataset.act === 'reroll') {
+        const { card } = timerDraw(true);
+        if (!card) { say($('timer-card-msg'), 'いまの条件で、ほかに引けるカードがないよ', 'warn'); return; }
+        setTimer(card);
+        timerNotice('');
+        renderTimerNow({ deal: true, focus: 'reroll' });
+      } else {
+        setTimer(null);
+        timerNotice('');
+        renderTimerNow({ focus: 'spin' });
+      }
+    });
+    $('timer-grid').addEventListener('click', (ev) => {
+      const b = ev.target.closest('button[data-id]');
+      if (!b) return;
+      const it = timerItems.get(Number(b.dataset.id));
+      if (!it) return;
+      if (tstate.cur === it.c.id) { say(it.msg, 'もう いまの持ち時間だよ', 'info'); return; }
+      setTimer(it.c);
+      timerNotice('');
+      renderTimerNow();
+      say(it.msg, 'いまの持ち時間にしたよ', 'ok');
+      showTimerHead();
+    });
   }
 
   // ---------- 遊び方 ----------
@@ -1959,6 +2308,7 @@ a { color: inherit; }
       $('panel-' + t).hidden = !on;
     });
     if (name === 'list') layoutList();
+    if (name === 'timer') layoutTimerList();
     if (!opts.keepHash) { try { window.history.replaceState(null, '', '#' + name); } catch (e) { /* 書けなくてもいい */ } }
     if (changed && !opts.keepScroll) {
       const y = $('masthead').getBoundingClientRect().bottom + window.scrollY;
@@ -2004,6 +2354,7 @@ a { color: inherit; }
   buildSettings();
   buildList();
   buildHowto();
+  buildTimer();
   if (firstRun) {
     spin();   // 初めては ★1〜★2 から2枚（初期の条件のまま）
     setNotice('例として' + hand.ids.length + '枚引いてあるよ。条件を選んで「ガチャを回す」を押してみよう');
@@ -2014,6 +2365,11 @@ a { color: inherit; }
   renderHistory();
   renderListFilters();
   refreshListMarks();
+  if (T) {
+    renderTimerSettings();
+    renderTimerNow();
+    refreshTimerMarks();
+  }
   const fromHash = location.hash.slice(1);
   showTab(TABS.includes(fromHash) ? fromHash : tab, { keepHash: true, keepScroll: true });
 })();

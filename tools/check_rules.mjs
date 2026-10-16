@@ -1,4 +1,4 @@
-// rules.js の検査: meta・id の通し番号・必須項目・語彙（features）・件数・両立判定
+// rules.js の検査: meta・id の通し番号・必須項目・語彙（features）・件数・両立判定・持ち時間（timer）
 // 使い方: node tools/check_rules.mjs games/catan   （引数なしなら games/ の全部）
 import { gameDirsFromArgs, loadGame, conflicts, rel } from './lib.mjs';
 
@@ -63,6 +63,38 @@ for (const dir of dirs) {
     if (/～/.test(all)) problems.push(`No.${r.id} 全角チルダ（～）がある。〜にそろえる`);
   }
 
+  // 持ち時間（timer）: ルールとは別の番号（T01〜）。id の通し番号・★の並び・必須項目・タイトルの重複・文字種
+  let timerLine = 'なし';
+  if (D.timer !== undefined) {
+    const TM = D.timer;
+    if (!TM || typeof TM !== 'object' || !Array.isArray(TM.cards) || !TM.cards.length) problems.push('timer.cards が無い・0件');
+    else {
+      const C = TM.cards;
+      const tno = (c) => 'T' + String(c.id).padStart(2, '0');
+      for (const k of Object.keys(TM)) if (!['title', 'base', 'howto', 'startLv', 'cards'].includes(k)) problems.push(`timer の知らない項目: ${k}`);
+      if (!TM.title) problems.push('timer.title が無い');
+      if (!TM.base) problems.push('timer.base が無い（まだ引いていないときに出す、ふだんの持ち時間）');
+      if (TM.startLv !== undefined && (!Array.isArray(TM.startLv) || !TM.startLv.length || TM.startLv.some((v) => ![1, 2, 3, 4, 5].includes(v)))) problems.push('timer.startLv が変');
+      C.forEach((c, i) => { if (c.id !== i + 1) problems.push(`持ち時間の id の並び: index ${i} が id ${c.id}`); });
+      const knownT = new Set(['id', 'lv', 'title', 'text', 'note', 'need']);
+      const seenT = new Map();
+      for (const c of C) {
+        for (const k of ['id', 'lv', 'title', 'text']) if (c[k] === undefined || c[k] === '') problems.push(`${tno(c)} ${k} が無い`);
+        if (![1, 2, 3, 4, 5].includes(c.lv)) problems.push(`${tno(c)} lv が変: ${c.lv}`);
+        for (const k of Object.keys(c)) if (!knownT.has(k)) problems.push(`${tno(c)} 知らない項目: ${k}`);
+        if (seenT.has(c.title)) problems.push(`持ち時間のタイトル重複: ${c.title}（${seenT.get(c.title)} と ${tno(c)}）`);
+        seenT.set(c.title, tno(c));
+        const all = [c.title, c.text, c.note || '', c.need || ''].join(' ');
+        if (/["']/.test(all)) problems.push(`${tno(c)} 半角の引用符がある`);
+        if (/～/.test(all)) problems.push(`${tno(c)} 全角チルダ（～）がある。〜にそろえる`);
+      }
+      for (let i = 1; i < C.length; i++) if (C[i].lv < C[i - 1].lv) problems.push(`持ち時間の lv の並びが逆: ${tno(C[i])}`);
+      const byLvT = {};
+      for (const c of C) byLvT[c.lv] = (byLvT[c.lv] || 0) + 1;
+      timerLine = `${C.length}枚 / 難易度別: ${JSON.stringify(byLvT)} / need あり: ${C.filter((c) => c.need).length}枚`;
+    }
+  }
+
   // 両立判定（画面と同じ規則）
   const compat = R.map((a) => R.filter((b) => b !== a && !conflicts(a, b)).length);
   const minCompat = R.length ? Math.min(...compat) : 0;
@@ -81,6 +113,7 @@ for (const dir of dirs) {
   console.log('need あり:', R.filter((r) => r.need).length, '件 / p あり:', R.filter((r) => r.p).length, '件 / list あり:', R.filter((r) => r.list).length, '件');
   console.log('両立しない組（全体）:', R.reduce((n, a, i) => n + R.slice(i + 1).filter((b) => conflicts(a, b)).length, 0), '組');
   console.log('使われていない要素（features）:', unused.join(', ') || 'なし');
+  console.log('持ち時間:', timerLine);
   console.log(problems.length ? '問題:\n- ' + problems.join('\n- ') : '問題: なし');
   if (problems.length) failedGames++;
 }

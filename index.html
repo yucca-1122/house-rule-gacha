@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>改造ルールガチャ</title>
 <meta name="description" content="ボードゲームの改造ルール（ハウスルール）をランダムに引くページ集。">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+<link rel="apple-touch-icon" type="image/png" sizes="180x180" href="assets/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="改造ルールガチャ">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#1d6a90">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b1e2a">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
@@ -239,6 +245,9 @@ body::before {
 .mix .m5 { background: linear-gradient(90deg, var(--lv5), var(--lv5-b)); }
 .game-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; font-size: 13px; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
 .game-meta b { font-family: var(--font-display); font-weight: 400; font-size: 17px; color: var(--ink); margin-right: 2px; }
+.game-timer { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px; font-size: 13px; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+.game-timer svg { width: 15px; height: 15px; flex: none; align-self: center; color: var(--ink-dim); }
+.game-timer b { font-family: var(--font-display); font-weight: 400; font-size: 15px; color: var(--ink); }
 .game-go { justify-self: start; margin-top: 4px; padding: 8px 18px; border-radius: 10px; background: var(--wheat); color: var(--on-wheat); font-weight: 700; font-size: 14px; line-height: 1.2; box-shadow: 0 3px 0 var(--wheat-edge); }
 .game:hover .game-go { filter: brightness(1.05); }
 .foot { margin: 30px 0 0; font-size: 13px; line-height: 1.7; color: var(--on-sea-dim); }
@@ -270,6 +279,7 @@ body::before {
           <p class="game-sub">通常版（3〜4人）で遊べるハウスルール</p>
           <span class="mix" role="img" aria-label="難易度の内わけ: ★1 62件、★2 69件、★3 46件、★4 23件、★5 15件"><span class="m1" style="flex-grow: 62"></span><span class="m2" style="flex-grow: 69"></span><span class="m3" style="flex-grow: 46"></span><span class="m4" style="flex-grow: 23"></span><span class="m5" style="flex-grow: 15"></span></span>
           <span class="game-meta"><span><b>215</b>件</span><span>更新 2026-10-16</span></span>
+          <span class="game-timer"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7.8" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 13.5V9.4M9.6 2.6h4.8M12 2.6v3.1M18.3 6.9l1.5-1.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>持ち時間ガチャ <b>25</b>種</span>
           <span class="game-go">開く</span>
         </a>
       </li>
