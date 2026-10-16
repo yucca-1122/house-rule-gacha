@@ -1,4 +1,4 @@
-// rules.js の検査: meta・id の通し番号・必須項目・語彙（features）・件数・両立判定・持ち時間（timer）
+// rules.js の検査: meta・id の通し番号・必須項目・語彙（features）・件数・両立判定・持ち時間（timer）・言葉（glossary）・チーム戦（team）
 // 使い方: node tools/check_rules.mjs games/catan   （引数なしなら games/ の全部）
 import { gameDirsFromArgs, loadGame, conflicts, rel } from './lib.mjs';
 
@@ -95,6 +95,74 @@ for (const dir of dirs) {
     }
   }
 
+  // 言葉（glossary）: term の空・重複、desc の空、tap は true / false
+  let glossaryLine = 'なし';
+  if (D.glossary !== undefined) {
+    if (!Array.isArray(D.glossary)) problems.push('glossary が配列でない');
+    else {
+      const seenG = new Set();
+      for (const g of D.glossary) {
+        if (!g || typeof g !== 'object') { problems.push('glossary に変な項目がある'); continue; }
+        if (!g.term || typeof g.term !== 'string' || !g.term.trim()) { problems.push('glossary に term が空のものがある'); continue; }
+        if (seenG.has(g.term)) problems.push(`glossary の term 重複: ${g.term}`);
+        seenG.add(g.term);
+        if (!g.desc || typeof g.desc !== 'string') problems.push(`glossary「${g.term}」の desc が無い`);
+        if (g.tap !== undefined && typeof g.tap !== 'boolean') problems.push(`glossary「${g.term}」の tap が true / false でない`);
+        for (const k of Object.keys(g)) if (!['term', 'desc', 'tap'].includes(k)) problems.push(`glossary「${g.term}」の知らない項目: ${k}`);
+        if (/["']/.test(g.desc || '') || /～/.test(g.desc || '')) problems.push(`glossary「${g.term}」に半角の引用符か「～」がある`);
+      }
+      glossaryLine = `${D.glossary.length}語（点線にするもの ${D.glossary.filter((g) => g && g.tap === true).length}語）`;
+    }
+  }
+
+  // チーム戦（team）: formats（id の重複・players・base）と cards（id の通し番号・★の並び・必須・fmt・知らない項目・文字種）
+  let teamLine = 'なし';
+  if (D.team !== undefined) {
+    const TM = D.team;
+    if (!TM || typeof TM !== 'object' || !Array.isArray(TM.formats) || !TM.formats.length || !Array.isArray(TM.cards)) problems.push('team の formats か cards が無い');
+    else {
+      for (const k of Object.keys(TM)) if (!['title', 'howto', 'startLv', 'formats', 'cards'].includes(k)) problems.push(`team の知らない項目: ${k}`);
+      if (!TM.title) problems.push('team.title が無い');
+      if (TM.startLv !== undefined && (!Array.isArray(TM.startLv) || !TM.startLv.length || TM.startLv.some((v) => ![1, 2, 3, 4, 5].includes(v)))) problems.push('team.startLv が変');
+      const fmtIds = new Set();
+      for (const f of TM.formats) {
+        if (!f || typeof f !== 'object' || !f.id) { problems.push('team.formats に id の無いものがある'); continue; }
+        if (fmtIds.has(f.id)) problems.push(`team.formats の id 重複: ${f.id}`);
+        fmtIds.add(f.id);
+        if (!f.name) problems.push(`形 ${f.id} の name が無い`);
+        if (!Number.isInteger(f.players) || f.players < 1) problems.push(`形 ${f.id} の players が変: ${f.players}`);
+        else if (choices.length && !choices.includes(f.players)) problems.push(`形 ${f.id} の players（${f.players}）が meta.players の選択肢に無い`);
+        if (!Array.isArray(f.base) || !f.base.length || f.base.some((b) => typeof b !== 'string' || !b)) problems.push(`形 ${f.id} の base が無い・空の行がある`);
+        for (const k of Object.keys(f)) if (!['id', 'name', 'players', 'base'].includes(k)) problems.push(`形 ${f.id} の知らない項目: ${k}`);
+      }
+      const C = TM.cards;
+      const cno = (c) => 'C' + String(c.id).padStart(2, '0');
+      C.forEach((c, i) => { if (c.id !== i + 1) problems.push(`チーム戦の id の並び: index ${i} が id ${c.id}`); });
+      const knownC = new Set(['id', 'lv', 'title', 'text', 'list', 'note', 'need', 'fmt', 'x']);
+      const seenC = new Map();
+      const xC = new Map();
+      for (const c of C) {
+        for (const k of ['id', 'lv', 'title', 'text']) if (c[k] === undefined || c[k] === '') problems.push(`${cno(c)} ${k} が無い`);
+        if (![1, 2, 3, 4, 5].includes(c.lv)) problems.push(`${cno(c)} lv が変: ${c.lv}`);
+        for (const k of Object.keys(c)) if (!knownC.has(k)) problems.push(`${cno(c)} 知らない項目: ${k}`);
+        for (const k of ['list', 'fmt', 'x']) if (c[k] !== undefined && !Array.isArray(c[k])) problems.push(`${cno(c)} ${k} が配列でない`);
+        for (const f of c.fmt || []) if (!fmtIds.has(f)) problems.push(`${cno(c)} 知らない形: ${f}`);
+        for (const k of c.x || []) xC.set(k, (xC.get(k) || 0) + 1);
+        if (seenC.has(c.title)) problems.push(`チーム戦のタイトル重複: ${c.title}（${seenC.get(c.title)} と ${cno(c)}）`);
+        seenC.set(c.title, cno(c));
+        const all = [c.title, c.text, c.note || '', c.need || '', ...(c.list || [])].join(' ');
+        if (/["']/.test(all)) problems.push(`${cno(c)} 半角の引用符がある`);
+        if (/～/.test(all)) problems.push(`${cno(c)} 全角チルダ（～）がある。〜にそろえる`);
+      }
+      for (let i = 1; i < C.length; i++) if (C[i].lv < C[i - 1].lv) problems.push(`チーム戦の lv の並びが逆: ${cno(C[i])}`);
+      const byLvC = {};
+      for (const c of C) byLvC[c.lv] = (byLvC[c.lv] || 0) + 1;
+      const perFmt = TM.formats.map((f) => `${f.id}=${C.filter((c) => !c.fmt || c.fmt.includes(f.id)).length}`).join('・');
+      const lonelyC = [...xC].filter(([, n]) => n === 1).map(([k]) => k);
+      teamLine = `${TM.formats.length}形 / ${C.length}枚 / 難易度別: ${JSON.stringify(byLvC)} / 形ごと: ${perFmt} / x のグループ（1枚しかないもの）: ${lonelyC.join(', ') || 'なし'}`;
+    }
+  }
+
   // 両立判定（画面と同じ規則）
   const compat = R.map((a) => R.filter((b) => b !== a && !conflicts(a, b)).length);
   const minCompat = R.length ? Math.min(...compat) : 0;
@@ -114,6 +182,8 @@ for (const dir of dirs) {
   console.log('両立しない組（全体）:', R.reduce((n, a, i) => n + R.slice(i + 1).filter((b) => conflicts(a, b)).length, 0), '組');
   console.log('使われていない要素（features）:', unused.join(', ') || 'なし');
   console.log('持ち時間:', timerLine);
+  console.log('言葉:', glossaryLine);
+  console.log('チーム戦:', teamLine);
   console.log(problems.length ? '問題:\n- ' + problems.join('\n- ') : '問題: なし');
   if (problems.length) failedGames++;
 }

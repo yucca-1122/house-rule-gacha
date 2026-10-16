@@ -1,8 +1,8 @@
-<title>改造ルールガチャ</title>
+<title>ルールガチャ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
-<!-- 改造ルールガチャの画面（全ゲーム共通の型）。データは同じ場所の rules.js（window.RULE_GACHA）。
+<!-- ルールガチャの画面（全ゲーム共通の型）。データは同じ場所の rules.js（window.RULE_GACHA）。
      ゲームごとのページは tools/build.mjs が作る。手順は docs/ゲームの足し方.md -->
 <style>
 /* Layout: 地は海。上に名前とタブ。ガチャは「条件 → 回す → いまのルール → 履歴」の縦1列で、PC は左に条件と履歴・右にいまのルール。紙のカードはルールだけ。 */
@@ -297,6 +297,19 @@ a { color: inherit; }
 /* タブが4つ（持ち時間あり）のスマホ: 高さは変えず、横の余白だけ詰める */
 @media (max-width: 719px) { .tabs--4 .tab { padding-inline: 8px; } }
 @media (max-width: 379px) { .tabs--4 .tab { padding-inline: 5px; } }
+/* タブが5つ（チーム戦あり）のスマホ: 「ぜんぶ見る」を「一覧」にして件数を隠す。入りきらない幅では、タブの列だけが横に動く */
+.tab-short { display: none; }
+@media (max-width: 719px) {
+  .tabs--5 { overflow-x: auto; scrollbar-width: none; }
+  .tabs--5::-webkit-scrollbar { display: none; }
+  .tabs--5 .tab { flex: 1 0 auto; padding-inline: 7px; }
+  .tabs--5 .tab:focus-visible { outline-offset: -3px; }
+  .five-tabs .tab-long, .five-tabs .tab-count { display: none; }
+  .five-tabs .tab-short { display: inline; }
+}
+@media (max-width: 379px) { .tabs--5 .tab { padding-inline: 3px; } }
+/* 件数のバッジ（11.5px＋上下3px）を隠しても、タブの高さは前と同じ 37.5px のまま（タブの下が動かないように） */
+@media (min-width: 360px) and (max-width: 719px) { .tabs--5 .tab { min-height: 37.5px; } }
 @media (min-width: 720px) {
   .tabs { display: inline-flex; }
   .tab { flex: 0 0 auto; padding-inline: 20px; }
@@ -695,6 +708,79 @@ a { color: inherit; }
 .hist-empty { margin: 0; font-size: 13px; color: var(--on-sea-dim); }
 .hist-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 
+/* ---------- チーム戦 ---------- */
+.team {
+  display: grid;
+  gap: 26px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "mset" "mcur" "mlist";
+}
+.m-set { grid-area: mset; display: grid; gap: 16px; align-content: start; min-width: 0; }
+.m-cur { grid-area: mcur; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.m-list { grid-area: mlist; display: grid; gap: 12px; align-content: start; min-width: 0; }
+@media (min-width: 980px) {
+  .team {
+    grid-template-columns: 352px minmax(0, 1fr);
+    grid-template-areas: "mset mcur" "mlist mlist";
+    column-gap: 36px;
+    align-items: start;
+  }
+}
+.team-howto { margin: 0; font-size: 13.5px; line-height: 1.7; color: var(--on-sea-dim); }
+.fmt-row { position: relative; display: flex; flex-wrap: wrap; gap: 6px; }
+.fmt-row input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
+.fmt-row label {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1.5px dashed var(--on-sea-line);
+  color: var(--on-sea-dim);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
+  cursor: pointer;
+}
+.fmt-row label small { font-size: 11.5px; opacity: .75; font-variant-numeric: tabular-nums; }
+.fmt-row label:hover { color: var(--on-sea); border-color: var(--on-sea-dim); }
+.fmt-row input:checked + label { border-style: solid; border-color: var(--pick); background: var(--pick); color: var(--on-pick); }
+.fmt-row input:focus-visible + label { outline: 3px solid var(--focus); outline-offset: 2px; }
+.team-base { display: grid; gap: 8px; padding: 14px 16px 15px; border-radius: 14px; background: var(--paper); color: var(--ink); box-shadow: 0 3px 0 var(--edge); }
+.team-base-title { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 17px; line-height: 1.4; }
+.team-off { margin: 0; padding: 14px 16px; border: 2px dashed var(--on-sea-line); border-radius: 14px; font-size: 14px; line-height: 1.7; }
+.team-draw { display: grid; gap: 16px; }
+.team-draw .seg { max-width: 260px; }
+.pool-note { display: block; font-size: 12px; }
+
+/* ---------- 言葉の説明（点線と吹き出し）: 文字の大きさ・行の高さは変えない ---------- */
+.term {
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: .22em;
+  text-decoration-color: var(--ink-dim);
+  border-radius: 3px;
+  cursor: help;
+  -webkit-tap-highlight-color: transparent;
+}
+.term:hover, .term[aria-expanded="true"] { background: var(--chip-sand); }
+.term:focus-visible { outline: 2px solid var(--focus-paper); outline-offset: 1px; }
+.term-tip {
+  position: absolute;
+  z-index: 30;
+  max-width: min(300px, calc(100vw - 32px));
+  padding: 9px 12px 10px;
+  border-radius: 10px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 13.5px;
+  line-height: 1.6;
+  box-shadow: 0 6px 18px var(--edge);
+}
+.term-tip b { display: block; margin-bottom: 2px; font-weight: 700; }
+.terms-hint { margin: 8px 0 0; font-size: 13px; line-height: 1.6; color: var(--ink-dim); }
+
 /* ---------- 持ち時間 ---------- */
 .timer {
   display: grid;
@@ -835,7 +921,7 @@ a { color: inherit; }
         <polygon class="t-forest" points="8.66,-24.2 16.63,-19.6 16.63,-10.4 8.66,-5.8 0.69,-10.4 0.69,-19.6"/>
       </svg>
       <div class="masthead-text">
-        <h1 class="app-title" id="app-title">改造ルールガチャ</h1>
+        <h1 class="app-title" id="app-title">ルールガチャ</h1>
         <p class="app-sub" id="app-sub">ハウスルール集</p>
       </div>
     </header>
@@ -843,8 +929,9 @@ a { color: inherit; }
     <div class="tabbar" id="tabbar">
       <div class="tabs" id="tabs" role="tablist" aria-label="画面のきりかえ">
         <button type="button" class="tab" role="tab" id="tab-gacha" aria-controls="panel-gacha" aria-selected="true">ガチャ</button>
+        <button type="button" class="tab" role="tab" id="tab-team" aria-controls="panel-team" aria-selected="false" tabindex="-1" hidden>チーム戦</button>
         <button type="button" class="tab" role="tab" id="tab-timer" aria-controls="panel-timer" aria-selected="false" tabindex="-1" hidden>持ち時間</button>
-        <button type="button" class="tab" role="tab" id="tab-list" aria-controls="panel-list" aria-selected="false" tabindex="-1">ぜんぶ見る<span class="tab-count" id="tab-list-count"></span></button>
+        <button type="button" class="tab" role="tab" id="tab-list" aria-controls="panel-list" aria-selected="false" tabindex="-1"><span class="tab-long">ぜんぶ見る</span><span class="tab-short">一覧</span><span class="tab-count" id="tab-list-count"></span></button>
         <button type="button" class="tab" role="tab" id="tab-howto" aria-controls="panel-howto" aria-selected="false" tabindex="-1">遊び方</button>
       </div>
     </div>
@@ -903,7 +990,7 @@ a { color: inherit; }
           <div class="hand" id="hand"></div>
           <div class="hand-empty" id="hand-empty" hidden>
             <p><b>いまのルールは空っぽだよ。</b></p>
-            <p>「ガチャを回す」か、<a href="#list">ぜんぶ見る</a>から入れよう。</p>
+            <p>「ガチャを回す」か、<a href="#list"><span class="tab-long">ぜんぶ見る</span><span class="tab-short">一覧</span></a>から入れよう。</p>
           </div>
         </div>
 
@@ -919,6 +1006,70 @@ a { color: inherit; }
               </div>
             </div>
           </details>
+        </div>
+      </section>
+
+      <!-- チーム戦（rules.js に team があるゲームだけ） -->
+      <section class="panel team" id="panel-team" role="tabpanel" aria-labelledby="tab-team" hidden>
+        <div class="m-set">
+          <h2 class="sr-only" id="team-title">チーム戦</h2>
+          <p class="team-howto" id="team-howto" hidden></p>
+          <div class="field">
+            <p class="field-label" id="team-fmt-label">チームの形</p>
+            <div class="fmt-row" id="team-fmt-row" role="radiogroup" aria-labelledby="team-fmt-label"></div>
+          </div>
+          <p class="notice" id="team-fmt-notice" role="status" aria-live="polite" hidden></p>
+          <div class="team-base" id="team-base" hidden>
+            <h3 class="team-base-title" id="team-base-title"></h3>
+            <ul class="card-list" id="team-base-list"></ul>
+          </div>
+          <p class="team-off" id="team-off">チームの形を選ぶと、その形の基本の決まりが出て、チーム戦のカードも引けるよ。</p>
+          <div class="team-draw" id="team-draw" hidden>
+            <div class="field">
+              <p class="field-label" id="team-lv-label">難易度</p>
+              <div class="lv-row" id="team-lv-row" role="group" aria-labelledby="team-lv-label"></div>
+            </div>
+            <div class="field">
+              <p class="field-label" id="team-count-label">枚数</p>
+              <div class="seg" id="team-count-seg" role="radiogroup" aria-labelledby="team-count-label"></div>
+            </div>
+            <p class="set-hint" id="team-hint" role="status" aria-live="polite"></p>
+            <button type="button" class="spin" id="team-spin"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="16.6" cy="9.2" r="2.6" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M2.8 19.5c.6-3.4 3-5.3 5.7-5.3s5.1 1.9 5.7 5.3M14.4 14.5c.7-.3 1.4-.4 2.2-.4 2.3 0 4.2 1.6 4.7 4.6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><span id="team-spin-label">チーム戦のカードを引く</span></button>
+            <p class="pool-line" id="team-pool-line" aria-live="polite"></p>
+          </div>
+        </div>
+
+        <div class="m-cur" id="team-cur" hidden>
+          <div class="hand-head" id="team-head">
+            <h2 class="hand-title">いまのチーム戦のカード</h2>
+            <span class="hand-count" id="team-hand-count"></span>
+          </div>
+          <div class="hand-tools">
+            <div class="hand-btns">
+              <button type="button" class="btn btn-paper" id="team-copy"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 8.5V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7.5a2 2 0 0 0 2 2h2.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>テキストでコピー</button>
+            </div>
+          </div>
+          <p class="tool-msg" id="team-msg" role="status" aria-live="polite"></p>
+          <div class="copy-fallback" id="team-copy-fallback-box" hidden>
+            <p class="copy-fallback-lead">コピーできなかったので、下の文字を長押しでコピーしてね</p>
+            <label class="sr-only" for="team-copy-fallback">コピーする文章</label>
+            <textarea id="team-copy-fallback" rows="8" spellcheck="false"></textarea>
+            <button type="button" class="btn btn-sea-line btn-sm" id="team-copy-fallback-close">閉じる</button>
+          </div>
+          <p class="notice" id="team-notice" role="status" aria-live="polite" hidden></p>
+          <div class="hand" id="team-hand"></div>
+          <div class="hand-empty" id="team-empty" hidden>
+            <p><b>基本の決まりだけで遊べるよ。</b></p>
+            <p>決まりを足したいときは「チーム戦のカードを引く」か、下の一覧から入れよう。</p>
+          </div>
+        </div>
+
+        <div class="m-list" id="team-list-sec" hidden>
+          <div class="hand-head">
+            <h2 class="hand-title">この形で使えるカード</h2>
+            <span class="hand-count" id="team-list-count"></span>
+          </div>
+          <div class="list-grid" id="team-grid"></div>
         </div>
       </section>
 
@@ -1008,7 +1159,8 @@ a { color: inherit; }
               <h3 id="h-use">使い方</h3>
               <ol class="steps">
                 <li><span>難易度・枚数<span id="step-players">・人数</span>を選んで、<b>「ガチャを回す」</b>を押す。</span></li>
-                <li><span>気に入らないカードは<b>「引き直す」</b>、使わないカードは<b>「外す」</b>。好きなルールは「ぜんぶ見る」から入れられるよ。</span></li>
+                <li><span>気に入らないカードは<b>「引き直す」</b>、使わないカードは<b>「外す」</b>。好きなルールは「<span class="tab-long">ぜんぶ見る</span><span class="tab-short">一覧</span>」から入れられるよ。</span></li>
+                <li id="step-team" hidden><span>チーム戦にするなら、「<span id="step-team-name">チーム戦</span>」タブで<b>チームの形</b>を選ぶ。基本の決まりが出て、チーム戦のカードも引ける。</span></li>
                 <li id="step-timer" hidden><span>持ち時間も変えるなら、「持ち時間」タブで<b>「<span id="step-timer-name">持ち時間ガチャ</span>を回す」</b>。使うのは1枚だけ。</span></li>
                 <li><span>決まったら<b>「テキストでコピー」</b>で LINE に貼って、みんなで読もう。</span></li>
                 <li><span>遊んでいる間は<b>「画面をつけたままにする」</b>をオンにして机に置いておこう。途中でルールを増やすときは「1枚足す」。</span></li>
@@ -1026,6 +1178,11 @@ a { color: inherit; }
               <h3 id="h-basic">基本ルールの早見表</h3>
               <div class="basics" id="howto-basics"></div>
             </section>
+            <section aria-labelledby="h-terms" id="howto-terms-sec" hidden>
+              <h3 id="h-terms">このページの言葉</h3>
+              <div class="table-wrap"><table class="quick"><tbody id="howto-terms"></tbody></table></div>
+              <p class="terms-hint" id="howto-terms-hint" hidden>カードの中の点線の言葉は、押すと説明が出るよ。</p>
+            </section>
           </div>
           <p class="disclaimer" id="howto-disclaimer" hidden></p>
           <p class="updated" id="howto-updated"></p>
@@ -1041,6 +1198,7 @@ a { color: inherit; }
     </main>
   </div>
 </div>
+<div class="term-tip" id="term-tip" role="tooltip" hidden><b id="term-tip-term"></b><span id="term-tip-desc"></span></div>
 
 <script src="rules.js"></script>
 <script>
@@ -1051,7 +1209,8 @@ a { color: inherit; }
   const HISTORY_MAX = 20;      // 履歴に残す回数
   const RECENT_N = 3;          // 「直近◯回」に出たルールはなるべく避ける
   const OTHER = '__other';     // cats に無いジャンルのルールの置き場
-  const ALL_TABS = ['gacha', 'timer', 'list', 'howto'];   // 持ち時間は timer があるゲームだけ
+  const ALL_TABS = ['gacha', 'team', 'timer', 'list', 'howto'];   // チーム戦は team、持ち時間は timer があるゲームだけ
+  const TEAM_HISTORY_MAX = 10;   // チーム戦のカードの、引いた記録を残す回数
   const TIMER_HISTORY_MAX = 10;   // 持ち時間の履歴に残す枚数
   const LIST_MIN_W = 290;      // ぜんぶ見るの1列の最小幅
   const LIST_GAP = 14;
@@ -1120,7 +1279,7 @@ a { color: inherit; }
   function readMeta(meta) {
     const o = {};
     o.id = str(meta.id).toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'game';
-    o.title = str(meta.title) || '改造ルールガチャ';
+    o.title = str(meta.title) || 'ルールガチャ';
     o.subtitle = str(meta.subtitle);
     o.copyTitle = str(meta.copyTitle) || '今日のハウスルール';
     o.disclaimer = str(meta.disclaimer);
@@ -1144,6 +1303,64 @@ a { color: inherit; }
       o.colorWords.sort((a, b) => b[0].length - a[0].length);   // 長いことばを先に当てる
     }
     return o;
+  }
+  // チーム戦（team）。formats は選ぶもの（引かない）、cards は引くもの（番号は C01 の形）
+  function readTeamData(t) {
+    if (!t || typeof t !== 'object' || !Array.isArray(t.formats) || !Array.isArray(t.cards)) return null;
+    const formats = [];
+    const fmtById = new Map();
+    t.formats.forEach((f) => {
+      if (!f || typeof f !== 'object') return;
+      const id = str(f.id);
+      if (!id || fmtById.has(id)) return;
+      const n = Number(f.players);
+      const o = { id, name: str(f.name) || id, players: Number.isInteger(n) && n > 0 ? n : 0, base: strList(f.base) };
+      formats.push(o);
+      fmtById.set(id, o);
+    });
+    if (!formats.length) return null;
+    const title = str(t.title) || 'チーム戦';
+    let maxId = 0;
+    t.cards.forEach((c) => { if (c && Number.isInteger(Number(c.id))) maxId = Math.max(maxId, Number(c.id)); });
+    const used = new Set();
+    const cards = [];
+    t.cards.forEach((c) => {
+      if (!c || typeof c !== 'object') return;
+      let id = Number(c.id);
+      if (!Number.isInteger(id) || id < 0 || used.has(id)) id = ++maxId;
+      used.add(id);
+      const raw = strList(c.fmt);
+      const fmt = raw.filter((k) => fmtById.has(k));
+      if (raw.length && !fmt.length) fmt.push('__none');   // 知らない形だけ書いてあるカードは、どの形でも使わない
+      const names = fmt.filter((k) => fmtById.has(k)).map((k) => fmtById.get(k).name);
+      cards.push({
+        id, lv: clampLv(c.lv), cat: '', title: str(c.title) || '（名前のないカード）', text: str(c.text), list: strList(c.list),
+        note: str(c.note), need: str(c.need), p: 0, x: strList(c.x), req: [], ban: [], fmt,
+        noLabel: 'C' + String(id).padStart(2, '0'), tagLabel: title,
+        extraTag: names.length && names.length < formats.length ? names.join('・') + 'だけ' : '',
+      });
+    });
+    cards.sort((a, b) => a.id - b.id);
+    const startLv = intList(t.startLv).filter((v) => v <= 5);
+    return {
+      title, howto: str(t.howto), formats, fmtById, cards,
+      byId: new Map(cards.map((c) => [c.id, c])),
+      startLv: startLv.length ? startLv : [1, 2, 3],
+    };
+  }
+  // 言葉の説明（glossary）。tap が true の言葉は、カードの中で点線にして押すと説明を出す
+  function readGlossary(g) {
+    if (!Array.isArray(g)) return [];
+    const out = [];
+    const seen = new Set();
+    g.forEach((e) => {
+      if (!e || typeof e !== 'object') return;
+      const term = str(e.term);
+      if (!term || seen.has(term)) return;
+      seen.add(term);
+      out.push({ term, desc: str(e.desc), tap: e.tap === true });
+    });
+    return out;
   }
   // 持ち時間のカード（timer.cards）。番号は T01 の形、難易度の名前と色はルールと同じ levels を使う
   function readTimerData(t) {
@@ -1245,6 +1462,8 @@ a { color: inherit; }
       rules,
       byId: new Map(rules.map((r) => [r.id, r])),
       timer: readTimerData(src.timer),
+      team: readTeamData(src.team),
+      glossary: readGlossary(src.glossary),
       basics: Array.isArray(src.basics) ? src.basics.filter((b) => b && typeof b === 'object') : [],
       combos: Array.isArray(src.combos) ? src.combos.filter((c) => c && typeof c === 'object') : [],
     };
@@ -1281,7 +1500,8 @@ a { color: inherit; }
   // 保存はゲームごと（同じ場所に複数のゲームを置いても混ざらない）
   const STORE_KEY = 'house-rule-gacha:' + D.id + ':v1';
   const T = D.timer;            // 持ち時間（無いゲームは null。タブも出さない）
-  const TABS = T ? ALL_TABS : ALL_TABS.filter((t) => t !== 'timer');
+  const TM = D.team;            // チーム戦（無いゲームは null。タブも出さない）
+  const TABS = ALL_TABS.filter((t) => (t !== 'timer' || T) && (t !== 'team' || TM));
 
   // ---------- 保存（できなくても動く） ----------
   function loadSaved() {
@@ -1350,11 +1570,31 @@ a { color: inherit; }
     return o;
   }
   const tstate = readTimer(saved && saved.timer);
+  // チームの形・チーム戦のカードの条件・いまのチーム戦のカード・引いた記録・チーム戦にする前の人数
+  function readTeam(t) {
+    const o = { fmt: null, lv: TM ? TM.startLv.slice() : [], n: 1, hand: [], hist: [], prevPlayers: 0 };
+    if (!TM || !t || typeof t !== 'object') return o;
+    if (typeof t.fmt === 'string' && TM.fmtById.has(t.fmt)) o.fmt = t.fmt;
+    if (Array.isArray(t.lv)) {
+      const lv = [...new Set(t.lv.map(Number).filter((v) => Number.isInteger(v) && v >= 1 && v <= 5))].sort((a, b) => a - b);
+      if (lv.length) o.lv = lv;
+    }
+    if ([1, 2, 3].includes(Number(t.n))) o.n = Number(t.n);
+    const okFmt = (c) => !o.fmt || !c.fmt.length || c.fmt.includes(o.fmt);
+    if (Array.isArray(t.hand)) o.hand = [...new Set(t.hand.map(Number).filter((id) => TM.byId.has(id) && okFmt(TM.byId.get(id))))];
+    if (Array.isArray(t.hist)) {
+      o.hist = t.hist.filter(Array.isArray).map((ids) => ids.map(Number).filter((id) => TM.byId.has(id))).filter((ids) => ids.length).slice(0, TEAM_HISTORY_MAX);
+    }
+    if (Number.isInteger(Number(t.prevPlayers)) && Number(t.prevPlayers) > 0) o.prevPlayers = Number(t.prevPlayers);
+    return o;
+  }
+  const mstate = readTeam(saved && saved.team);
 
   function save() {
     try {
       const data = { v: 1, settings, hand, history: hist, tab };
       if (T) data.timer = tstate;
+      if (TM) data.team = mstate;
       localStorage.setItem(STORE_KEY, JSON.stringify(data));
     } catch (e) { /* 保存できなくても続ける */ }
   }
@@ -1362,7 +1602,10 @@ a { color: inherit; }
   // ---------- 抽選 ----------
   // p（◯人専用）は、人数を選べるゲームのときだけ見る
   const fitsPlayers = (r) => !r.p || !settings.players || r.p === settings.players;
-  const fits = (r) => settings.lv.includes(r.lv) && !settings.catOff.includes(r.cat) && fitsPlayers(r);
+  // チーム戦の形を選んでいる間は、ルールのガチャから x に team を持つルールを外す（チーム戦どうしがぶつかるため）
+  const fmtNow = () => (TM && mstate.fmt ? TM.fmtById.get(mstate.fmt) || null : null);
+  const fitsTeam = (r) => !fmtNow() || !r.x.includes('team');
+  const fits = (r) => settings.lv.includes(r.lv) && !settings.catOff.includes(r.cat) && fitsPlayers(r) && fitsTeam(r);
   const pool = () => D.rules.filter(fits);
   const handRules = () => hand.ids.map((id) => D.byId.get(id)).filter(Boolean);
   function recentSet() {
@@ -1428,6 +1671,74 @@ a { color: inherit; }
   }
 
   // ---------- カード ----------
+  // ---------- 言葉の説明（点線と吹き出し） ----------
+  const TAPS = D.glossary.filter((g) => g.tap && g.desc);
+  const TAP_DESC = new Map(TAPS.map((g) => [g.term, g.desc]));
+  const reEsc = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const TAP_RE = TAPS.length ? new RegExp(TAPS.map((g) => g.term).sort((a, b) => b.length - a.length).map(reEsc).join('|'), 'g') : null;
+  // text を node に足す。tap の言葉は、カードごとに最初の1回だけ点線にする（used は、そのカードで点線にした言葉）
+  function termText(node, text, used) {
+    if (!TAP_RE) { node.append(text); return; }
+    let last = 0;
+    let m;
+    TAP_RE.lastIndex = 0;
+    while ((m = TAP_RE.exec(text))) {
+      if (used.has(m[0])) continue;
+      used.add(m[0]);
+      if (m.index > last) node.append(text.slice(last, m.index));
+      const t = el('span', 'term', m[0]);
+      t.setAttribute('role', 'button');
+      t.tabIndex = 0;
+      t.dataset.term = m[0];
+      t.setAttribute('aria-expanded', 'false');
+      t.setAttribute('aria-controls', 'term-tip');
+      node.append(t);
+      last = m.index + m[0].length;
+    }
+    if (last < text.length) node.append(text.slice(last));
+  }
+  const tip = $('term-tip');
+  let tipFor = null;
+  function closeTip() {
+    if (!tipFor) return;
+    tipFor.setAttribute('aria-expanded', 'false');
+    tipFor.removeAttribute('aria-describedby');
+    tipFor = null;
+    tip.hidden = true;
+  }
+  function openTip(t) {
+    if (tipFor === t) { closeTip(); return; }
+    closeTip();
+    tipFor = t;
+    $('term-tip-term').textContent = t.dataset.term;
+    $('term-tip-desc').textContent = TAP_DESC.get(t.dataset.term) || '';
+    tip.hidden = false;
+    t.setAttribute('aria-expanded', 'true');
+    t.setAttribute('aria-describedby', 'term-tip');
+    // 言葉のすぐ下に出す（下に入らないときは上）。画面の左右からははみ出さない
+    const r = t.getBoundingClientRect();
+    const b = document.body.getBoundingClientRect();
+    const w = tip.offsetWidth;
+    const h = tip.offsetHeight;
+    const left = Math.max(8, Math.min(r.left - 12, window.innerWidth - w - 8));
+    let top = r.bottom + 6;
+    if (top + h > window.innerHeight - 8 && r.top - h - 6 > 8) top = r.top - h - 6;
+    tip.style.left = (left - b.left) + 'px';
+    tip.style.top = (top - b.top) + 'px';
+  }
+  document.addEventListener('click', (ev) => {
+    const t = ev.target.closest && ev.target.closest('.term');
+    if (t) { openTip(t); return; }
+    if (tipFor && !(ev.target.closest && ev.target.closest('#term-tip'))) closeTip();
+  });
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape' && tipFor) { const t = tipFor; closeTip(); t.focus(); return; }
+    if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.classList && ev.target.classList.contains('term')) { ev.preventDefault(); openTip(ev.target); }
+  });
+  // スマホはスクロールでも高さが変わるので、幅が変わったときだけ閉じる
+  let tipW = window.innerWidth;
+  window.addEventListener('resize', () => { if (window.innerWidth !== tipW) { tipW = window.innerWidth; closeTip(); } });
+
   function buildCard(r, mini) {
     const card = el('article', mini ? 'card card--mini' : 'card');
     card.dataset.lv = r.lv;
@@ -1443,11 +1754,17 @@ a { color: inherit; }
     const tags = el('div', 'card-tags');
     tags.append(el('span', 'tag', r.tagLabel || catName(r.cat)));
     if (r.p) tags.append(el('span', 'tag tag-p', r.p + '人専用'));
+    if (r.extraTag) tags.append(el('span', 'tag tag-p', r.extraTag));
     body.append(tags, el('h3', 'card-title', r.title));
-    if (r.text) body.append(el('p', 'card-text', r.text));
+    const used = new Set();   // このカードで点線にした言葉（最初の1回だけ）
+    if (r.text) {
+      const p = el('p', 'card-text');
+      termText(p, r.text, used);
+      body.append(p);
+    }
     if (r.list.length) {
       const ul = el('ul', 'card-list');
-      r.list.forEach((s) => ul.append(el('li', null, s)));
+      r.list.forEach((s) => { const li = el('li'); termText(li, s, used); ul.append(li); });
       body.append(ul);
     }
     if (r.need) {
@@ -1457,7 +1774,8 @@ a { color: inherit; }
     }
     if (r.note) {
       const p = el('p', 'card-note');
-      p.append(el('b', null, '補足'), document.createTextNode(r.note));
+      p.append(el('b', null, '補足'));
+      termText(p, r.note, used);
       body.append(p);
     }
     card.append(strip, body);
@@ -1507,6 +1825,7 @@ a { color: inherit; }
   // opts.deal: 'all'（全部めくる）か、めくるカードの番号。opts.focus: { idx, act }
   function renderHand(opts) {
     opts = opts || {};
+    closeTip();
     const box = $('hand');
     const rules = handRules();
     box.textContent = '';
@@ -1623,7 +1942,8 @@ a { color: inherit; }
   function handText() {
     const rules = handRules();
     const tc = timerCard();
-    if (!rules.length && !tc) return '';
+    const f = fmtNow();
+    if (!rules.length && !tc && !f) return '';
     const out = ['【' + D.copyTitle + '】'];
     rules.forEach((r, i) => {
       out.push('');
@@ -1633,6 +1953,18 @@ a { color: inherit; }
       if (r.need) out.push('用意するもの：' + r.need);
       if (r.p) out.push('※' + r.p + '人専用');
     });
+    if (f) {
+      out.push('');
+      out.push('【' + TM.title + '】' + f.name);
+      f.base.forEach((b) => out.push('・' + b));
+      teamHand().forEach((c) => {
+        out.push('');
+        out.push(c.noLabel + ' ' + c.title + '（' + lvLabel(c.lv) + '）');
+        if (c.text) out.push(c.text);
+        c.list.forEach((x) => out.push('・' + x));
+        if (c.need) out.push('用意するもの：' + c.need);
+      });
+    }
     if (tc) {
       out.push('');
       out.push('【持ち時間】' + tc.noLabel + ' ' + tc.title + '（' + lvLabel(tc.lv) + '）');
@@ -1664,6 +1996,7 @@ a { color: inherit; }
   const COPY_UIS = [
     { btn: $('copy-text'), box: $('copy-fallback-box'), ta: $('copy-fallback'), close: $('copy-fallback-close'), msg: toolMsg },
     { btn: $('timer-copy'), box: $('timer-copy-fallback-box'), ta: $('timer-copy-fallback'), close: $('timer-copy-fallback-close'), msg: (t) => timerMsg(t) },
+    { btn: $('team-copy'), box: $('team-copy-fallback-box'), ta: $('team-copy-fallback'), close: $('team-copy-fallback-close'), msg: (t) => teamMsg(t) },
   ];
   COPY_UIS.forEach((ui) => {
     ui.btn.addEventListener('click', () => doCopy(ui));
@@ -1672,7 +2005,7 @@ a { color: inherit; }
   // コピーする中身が変わったら、出しっぱなしの手作業用の文は引っこめる
   function hideCopyFallbacks() { COPY_UIS.forEach((ui) => { ui.box.hidden = true; }); }
   function updateCopyButtons() {
-    const none = !handRules().length && !timerCard();
+    const none = !handRules().length && !timerCard() && !fmtNow();
     COPY_UIS.forEach((ui) => { ui.btn.disabled = none; });
   }
 
@@ -1798,7 +2131,7 @@ a { color: inherit; }
     for (let lv = 1; lv <= 5; lv++) {
       const b = $('lv-toggle-' + lv);
       b.setAttribute('aria-pressed', String(settings.lv.includes(lv)));
-      const n = D.rules.filter((r) => r.lv === lv && !settings.catOff.includes(r.cat) && fitsPlayers(r)).length;
+      const n = D.rules.filter((r) => r.lv === lv && !settings.catOff.includes(r.cat) && fitsPlayers(r) && fitsTeam(r)).length;
       b.querySelector('.lv-count').textContent = n + '件';
     }
     $('count-' + settings.n).checked = true;
@@ -1807,7 +2140,7 @@ a { color: inherit; }
     D.cats.forEach((c) => {
       const b = $('cat-' + safeKey(c.key));
       b.setAttribute('aria-pressed', String(!settings.catOff.includes(c.key)));
-      b.querySelector('.chip-n').textContent = String(D.rules.filter((r) => r.cat === c.key && settings.lv.includes(r.lv) && fitsPlayers(r)).length);
+      b.querySelector('.chip-n').textContent = String(D.rules.filter((r) => r.cat === c.key && settings.lv.includes(r.lv) && fitsPlayers(r) && fitsTeam(r)).length);
     });
     const onCats = D.cats.length - settings.catOff.length;
     $('cat-summary').textContent = settings.catOff.length ? onCats + ' / ' + D.cats.length + ' がオン' : 'ぜんぶオン（' + D.cats.length + '）';
@@ -1820,6 +2153,8 @@ a { color: inherit; }
     if (!k) line.append('いまの条件だと、引けるルールがないよ');
     else if (k < settings.n) line.append('いまの条件だと', el('b', null, String(k)), '件だけ。' + k + '枚まで引けるよ');
     else line.append('いまの条件で', el('b', null, String(k)), '件から' + settings.n + '枚引くよ');
+    const f = fmtNow();
+    if (f) line.append(el('span', 'pool-note', TM.title + '（' + f.name + '）にしているので、チームのルールは外してるよ'));
   }
 
   // ---------- 履歴 ----------
@@ -1975,6 +2310,7 @@ a { color: inherit; }
   }
   function layoutList() {
     if ($('panel-list').hidden) return;
+    closeTip();
     const terms = fold(listF.q).split(/\s+/).filter(Boolean);
     const vis = [];
     listItems.forEach((it) => {
@@ -1995,11 +2331,13 @@ a { color: inherit; }
   function relayoutIfNeeded() {
     if (!$('panel-list').hidden && colsFor($('list-grid').clientWidth) !== listCols) layoutList();
     if (T && !$('panel-timer').hidden && colsFor($('timer-grid').clientWidth) !== timerCols) layoutTimerList();
+    if (TM && !$('panel-team').hidden && fmtNow() && colsFor($('team-grid').clientWidth) !== teamCols) layoutTeamList();
   }
   if ('ResizeObserver' in window) {
     const ro = new ResizeObserver(relayoutIfNeeded);
     ro.observe($('list-grid'));
     ro.observe($('timer-grid'));
+    ro.observe($('team-grid'));
   } else window.addEventListener('resize', relayoutIfNeeded);
 
   function refreshListMarks() {
@@ -2012,6 +2350,11 @@ a { color: inherit; }
   function addFromList(it) {
     const r = it.r;
     if (hand.ids.includes(r.id)) { say(it.msg, 'もう いまのルールに入ってるよ', 'info'); return; }
+    const fm = fmtNow();
+    if (fm && r.x.includes('team')) {
+      say(it.msg, TM.title + '（' + fm.name + '）にしている間は使えないよ。' + TM.title + 'のタブで「' + TM.title + 'にしない」を選ぶと入れられるよ', 'warn');
+      return;
+    }
     const bad = handRules().filter((h) => clash(h, r));
     if (bad.length) {
       say(it.msg, bad.map((b) => noStr(b.id) + '「' + b.title + '」').join('、') + 'といっしょには使えないよ', 'warn');
@@ -2092,6 +2435,7 @@ a { color: inherit; }
   // いまの持ち時間（引いていないときは、ふだんの持ち時間のまま）
   function renderTimerNow(opts) {
     opts = opts || {};
+    closeTip();
     const box = $('timer-now');
     box.textContent = '';
     hideCopyFallbacks();
@@ -2136,6 +2480,7 @@ a { color: inherit; }
   }
   function layoutTimerList() {
     if (!T || $('panel-timer').hidden) return;
+    closeTip();
     timerCols = fillColumns($('timer-grid'), T.cards.map((c) => timerItems.get(c.id).card));
   }
   function showTimerHead() {
@@ -2146,7 +2491,6 @@ a { color: inherit; }
   function buildTimer() {
     if (!T) return;
     $('tab-timer').hidden = false;
-    $('tabs').classList.add('tabs--4');
     $('step-timer').hidden = false;
     $('step-timer-name').textContent = T.title;
     $('timer-title').textContent = T.title;
@@ -2215,6 +2559,317 @@ a { color: inherit; }
     });
   }
 
+  // ---------- チーム戦 ----------
+  const teamItems = new Map();   // id → { c, card, btn, msg }
+  let teamCols = 0;
+  const teamUsable = (c) => { const f = fmtNow(); return !!f && (!c.fmt.length || c.fmt.includes(f.id)); };
+  const teamPool = () => TM.cards.filter((c) => teamUsable(c) && mstate.lv.includes(c.lv));
+  const teamHand = () => (TM ? mstate.hand.map((id) => TM.byId.get(id)).filter(Boolean) : []);
+  function teamRecent() {
+    const set = new Set();
+    mstate.hist.slice(0, RECENT_N).forEach((ids) => ids.forEach((id) => set.add(id)));
+    mstate.hand.forEach((id) => set.add(id));
+    return set;
+  }
+  function pushTeamHist(ids) {
+    mstate.hist.unshift(ids.slice());
+    if (mstate.hist.length > TEAM_HISTORY_MAX) mstate.hist.length = TEAM_HISTORY_MAX;
+  }
+  let teamHintTimer = 0;
+  function teamHint(text) {
+    const h = $('team-hint');
+    clearTimeout(teamHintTimer);
+    h.textContent = text || '';
+    if (text) teamHintTimer = setTimeout(() => { h.textContent = ''; }, 4000);
+  }
+  let teamMsgTimer = 0;
+  function teamMsg(text) {
+    const n = $('team-msg');
+    clearTimeout(teamMsgTimer);
+    n.textContent = text || '';
+    if (text) teamMsgTimer = setTimeout(() => { n.textContent = ''; }, 6000);
+  }
+  function teamNotice(text) {
+    const n = $('team-notice');
+    n.textContent = text || '';
+    n.hidden = !text;
+  }
+  // 形を変えたときの一言（人数・外したカードやルール）。形のボタンのすぐ下に出す
+  function teamFmtNotice(text) {
+    const n = $('team-fmt-notice');
+    n.textContent = text || '';
+    n.hidden = !text;
+  }
+  // チームの形を変える。形を選ぶとガチャの人数を合わせ、チームのルールをいまのルールから外す。「しない」で人数を戻す
+  function setFormat(id) {
+    const prev = mstate.fmt;
+    const next = id && TM.fmtById.has(id) ? id : null;
+    if (next === prev) return;
+    if (!prev && next) mstate.prevPlayers = settings.players || 0;
+    mstate.fmt = next;
+    const f = fmtNow();
+    const notes = [];
+    if (f) {
+      if (f.players && PLAYERS.includes(f.players) && settings.players !== f.players) {
+        settings.players = f.players;
+        notes.push('ガチャの人数を' + f.players + '人にしたよ');
+      }
+      const drop = teamHand().filter((c) => !teamUsable(c));
+      if (drop.length) {
+        mstate.hand = mstate.hand.filter((cid) => !drop.some((c) => c.id === cid));
+        notes.push(f.name + 'では使えないカード（' + drop.map((c) => c.noLabel).join('・') + '）を外したよ');
+      }
+      const bad = handRules().filter((r) => r.x.includes('team'));
+      if (bad.length) {
+        hand.ids = hand.ids.filter((rid) => !bad.some((r) => r.id === rid));
+        const t = TM.title + 'にしたので、いまのルールから' + bad.map((r) => noStr(r.id) + '「' + r.title + '」').join('、') + 'を外したよ';
+        setNotice(t);
+        notes.push(t);
+        renderHand();
+        afterHandChange();
+      }
+    } else {
+      if (mstate.prevPlayers && PLAYERS.includes(mstate.prevPlayers) && settings.players !== mstate.prevPlayers) {
+        settings.players = mstate.prevPlayers;
+        notes.push('ガチャの人数を' + settings.players + '人に戻したよ');
+      }
+      mstate.prevPlayers = 0;
+    }
+    save();
+    renderSettings();
+    renderTeam();
+    teamFmtNotice(notes.join('。'));
+  }
+  function toggleTeamLv(lv) {
+    const on = mstate.lv.includes(lv);
+    if (on && mstate.lv.length === 1) { teamHint('難易度は1つ以上オンにしておこう'); return; }
+    mstate.lv = on ? mstate.lv.filter((v) => v !== lv) : mstate.lv.concat(lv).sort((a, b) => a - b);
+    teamHint('');
+    save();
+    renderTeamSettings();
+  }
+  function renderTeamSettings() {
+    for (let lv = 1; lv <= 5; lv++) {
+      const b = $('team-lv-' + lv);
+      b.setAttribute('aria-pressed', String(mstate.lv.includes(lv)));
+      b.querySelector('.lv-count').textContent = TM.cards.filter((c) => c.lv === lv && teamUsable(c)).length + '種';
+    }
+    $('team-count-' + mstate.n).checked = true;
+    const k = teamPool().length;
+    $('team-spin').disabled = k === 0;
+    const line = $('team-pool-line');
+    line.textContent = '';
+    if (!k) line.append('いまの条件だと、引けるカードがないよ');
+    else if (k < mstate.n) line.append('いまの条件だと', el('b', null, String(k)), '種だけ。' + k + '枚まで引けるよ');
+    else line.append('いまの条件で', el('b', null, String(k)), '種から' + mstate.n + '枚引くよ');
+  }
+  function renderTeamHand(opts) {
+    opts = opts || {};
+    closeTip();
+    hideCopyFallbacks();
+    updateCopyButtons();
+    const box = $('team-hand');
+    const cards = teamHand();
+    box.textContent = '';
+    box.dataset.n = String(cards.length);
+    $('team-hand-count').textContent = cards.length ? cards.length + '枚' : '';
+    $('team-empty').hidden = cards.length > 0;
+    const animate = opts.deal != null && !reduced();
+    const base = opts.baseDelay || 0;
+    cards.forEach((c, i) => {
+      const slot = el('div', 'slot');
+      const { card, body } = buildCard(c, false);
+      const actions = el('div', 'card-actions');
+      const rb = button('btn btn-line', '引き直す', 'team-reroll-' + (i + 1));
+      rb.dataset.act = 'reroll';
+      rb.dataset.idx = String(i);
+      const xb = button('btn btn-quiet', '外す', 'team-remove-' + (i + 1));
+      xb.dataset.act = 'remove';
+      xb.dataset.idx = String(i);
+      actions.append(rb, xb);
+      const msg = el('p', 'card-msg');
+      msg.id = 'team-msg-' + (i + 1);
+      msg.setAttribute('role', 'status');
+      msg.hidden = true;
+      body.append(actions, msg);
+      slot.append(card);
+      if (animate && (opts.deal === 'all' || opts.deal === i)) deal(slot, card, base + (opts.deal === 'all' ? i * 160 : 0));
+      box.append(slot);
+    });
+    if (opts.focus) {
+      const target = cards.length ? $('team-' + opts.focus.act + '-' + (Math.min(opts.focus.idx, cards.length - 1) + 1)) : $('team-spin');
+      if (target) { try { target.focus({ preventScroll: true }); } catch (e) { target.focus(); } }
+    }
+  }
+  function refreshTeamMarks() {
+    teamItems.forEach((it) => {
+      const inHand = mstate.hand.includes(it.c.id);
+      it.btn.textContent = inHand ? '入ってる' : '入れる';
+      it.btn.classList.toggle('is-in', inHand);
+    });
+  }
+  function layoutTeamList() {
+    if (!TM || $('panel-team').hidden || !fmtNow()) return;
+    closeTip();
+    const nodes = TM.cards.filter(teamUsable).map((c) => teamItems.get(c.id).card);
+    teamCols = fillColumns($('team-grid'), nodes);
+    $('team-list-count').textContent = nodes.length + '種';
+  }
+  function renderTeam(opts) {
+    if (!TM) return;
+    const f = fmtNow();
+    $('team-fmt-' + (f ? safeKey(f.id) : 'none')).checked = true;
+    $('team-base').hidden = !f;
+    $('team-off').hidden = !!f;
+    $('team-draw').hidden = !f;
+    $('team-cur').hidden = !f;
+    $('team-list-sec').hidden = !f;
+    if (f) {
+      $('team-base-title').textContent = f.name + ' の基本の決まり';
+      const ul = $('team-base-list');
+      ul.textContent = '';
+      f.base.forEach((b) => ul.append(el('li', null, b)));
+      renderTeamSettings();
+      renderTeamHand(opts);
+      layoutTeamList();
+      refreshTeamMarks();
+    }
+    updateCopyButtons();
+  }
+  function spinTeam() {
+    const cands = teamPool();
+    if (!cands.length) { teamNotice('いまの条件だと引けるカードがないよ。難易度を増やしてみて'); return; }
+    const { picked, stale } = drawSet(cands, mstate.n, teamRecent(), []);
+    mstate.hand = picked.map((c) => c.id);
+    pushTeamHist(mstate.hand);
+    save();
+    let msg = '';
+    if (picked.length < mstate.n) {
+      msg = cands.length < mstate.n && picked.length === cands.length
+        ? '条件に合うカードが' + cands.length + '種だけだから、' + picked.length + '枚引いたよ'
+        : 'いっしょに使えるカードが足りなくて、' + picked.length + '枚だけ引いたよ';
+    } else if (stale > 0) {
+      msg = '候補が少ないから、最近出たカードもまぜたよ';
+    }
+    teamNotice(msg);
+    const head = $('team-head');
+    const scroll = needScrollTo(head);
+    renderTeamHand({ deal: 'all', baseDelay: scroll ? 260 : 0 });
+    refreshTeamMarks();
+    if (scroll) scrollToNode(head, 'start');
+  }
+  function rerollTeam(idx) {
+    const keep = teamHand().filter((_, i) => i !== idx);
+    const cands = teamPool().filter((c) => !mstate.hand.includes(c.id));
+    const { picked } = drawSet(cands, 1, teamRecent(), keep);
+    if (!picked.length) {
+      say($('team-msg-' + (idx + 1)), cands.length ? 'ほかのカードといっしょに使えるカードが、もう残ってないよ' : 'いまの条件で入れかえられるカードが、もう残ってないよ', 'warn');
+      return;
+    }
+    mstate.hand[idx] = picked[0].id;
+    pushTeamHist([picked[0].id]);
+    save();
+    teamNotice('');
+    renderTeamHand({ deal: idx, focus: { idx, act: 'reroll' } });
+    refreshTeamMarks();
+  }
+  function removeTeam(idx) {
+    mstate.hand.splice(idx, 1);
+    save();
+    teamNotice('');
+    renderTeamHand({ focus: { idx, act: 'remove' } });
+    refreshTeamMarks();
+  }
+  function addTeamFromList(it) {
+    const c = it.c;
+    if (mstate.hand.includes(c.id)) { say(it.msg, 'もう いまの' + TM.title + 'のカードに入ってるよ', 'info'); return; }
+    const bad = teamHand().filter((h) => clash(h, c));
+    if (bad.length) {
+      say(it.msg, bad.map((b) => b.noLabel + '「' + b.title + '」').join('、') + 'といっしょには使えないよ', 'warn');
+      return;
+    }
+    mstate.hand.push(c.id);
+    pushTeamHist([c.id]);
+    save();
+    teamNotice('');
+    renderTeamHand();
+    refreshTeamMarks();
+    say(it.msg, 'いまの' + TM.title + 'のカードに入れたよ（' + mstate.hand.length + '枚目）', 'ok');
+  }
+  function buildTeam() {
+    if (!TM) return;
+    $('tab-team').hidden = false;
+    $('tab-team').textContent = TM.title;
+    $('step-team').hidden = false;
+    $('step-team-name').textContent = TM.title;
+    $('team-title').textContent = TM.title;
+    $('team-howto').textContent = TM.howto;
+    $('team-howto').hidden = !TM.howto;
+    const row = $('team-fmt-row');
+    const fmtRadio = (key, label, players) => {
+      const input = el('input');
+      input.type = 'radio';
+      input.name = 'team-fmt';
+      input.id = 'team-fmt-' + key;
+      input.value = key;
+      const lab = el('label');
+      lab.htmlFor = input.id;
+      lab.append(label);
+      if (players) lab.append(el('small', null, players + '人'));
+      row.append(input, lab);
+      return input;
+    };
+    TM.formats.forEach((f) => fmtRadio(safeKey(f.id), f.name, f.players).addEventListener('change', () => setFormat(f.id)));
+    fmtRadio('none', TM.title + 'にしない', 0).addEventListener('change', () => setFormat(null));
+    const lvRow = $('team-lv-row');
+    for (let lv = 1; lv <= 5; lv++) {
+      const b = button('lv-toggle', null, 'team-lv-' + lv);
+      b.dataset.lv = String(lv);
+      b.append(lvTile(lv), el('span', 'sr-only', '★' + lv), el('span', 'lv-name', lvName(lv)), el('span', 'lv-count'));
+      b.addEventListener('click', () => toggleTeamLv(lv));
+      lvRow.append(b);
+    }
+    [1, 2, 3].forEach((n) => {
+      const input = el('input');
+      input.type = 'radio';
+      input.name = 'team-count';
+      input.id = 'team-count-' + n;
+      input.value = String(n);
+      input.addEventListener('change', () => { mstate.n = n; save(); renderTeamSettings(); });
+      const lab = el('label');
+      lab.htmlFor = input.id;
+      lab.append(String(n), el('small', null, '枚'));
+      $('team-count-seg').append(input, lab);
+    });
+    $('team-spin-label').textContent = TM.title + 'のカードを引く';
+    TM.cards.forEach((c) => {
+      const { card, body } = buildCard(c, true);
+      const actions = el('div', 'card-actions');
+      const b = button('btn btn-line', '入れる', 'team-add-' + c.id);
+      b.dataset.id = String(c.id);
+      actions.append(b);
+      const msg = el('p', 'card-msg');
+      msg.setAttribute('role', 'status');
+      msg.hidden = true;
+      body.append(actions, msg);
+      teamItems.set(c.id, { c, card, btn: b, msg });
+    });
+    $('team-spin').addEventListener('click', spinTeam);
+    $('team-hand').addEventListener('click', (ev) => {
+      const b = ev.target.closest('button[data-act]');
+      if (!b) return;
+      const i = Number(b.dataset.idx);
+      if (b.dataset.act === 'reroll') rerollTeam(i);
+      else removeTeam(i);
+    });
+    $('team-grid').addEventListener('click', (ev) => {
+      const b = ev.target.closest('button[data-id]');
+      if (!b) return;
+      const it = teamItems.get(Number(b.dataset.id));
+      if (it) addTeamFromList(it);
+    });
+  }
+
   // ---------- 遊び方 ----------
   // 早見表のことばに、色の六角形を付ける（meta.colorWords: ことば → 色。色は COLOR_KEYS のどれか）
   const escRe = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -2280,6 +2935,16 @@ a { color: inherit; }
       $('howto-basics').append(wrap);
     });
     $('howto-basics-sec').hidden = tables === 0;
+    const terms = $('howto-terms');
+    D.glossary.forEach((g) => {
+      const tr = el('tr');
+      const th = el('th', null, g.term);
+      th.scope = 'row';
+      tr.append(th, el('td', null, g.desc));
+      terms.append(tr);
+    });
+    $('howto-terms-sec').hidden = D.glossary.length === 0;
+    $('howto-terms-hint').hidden = TAPS.length === 0;
     $('howto-disclaimer').textContent = D.disclaimer;
     $('howto-disclaimer').hidden = !D.disclaimer;
     const up = str(D.meta.updated);
@@ -2301,6 +2966,8 @@ a { color: inherit; }
     });
     if (name === 'list') layoutList();
     if (name === 'timer') layoutTimerList();
+    if (name === 'team') layoutTeamList();
+    closeTip();
     if (!opts.keepHash) { try { window.history.replaceState(null, '', '#' + name); } catch (e) { /* 書けなくてもいい */ } }
     if (changed && !opts.keepScroll) {
       const y = $('masthead').getBoundingClientRect().bottom + window.scrollY;
@@ -2347,6 +3014,9 @@ a { color: inherit; }
   buildList();
   buildHowto();
   buildTimer();
+  buildTeam();
+  if (TABS.length > 3) $('tabs').classList.add('tabs--' + TABS.length);
+  if (TABS.length === 5) document.body.classList.add('five-tabs');   // スマホでは「ぜんぶ見る」を「一覧」と書く
   if (firstRun) {
     spin();   // 初めては ★1〜★2 から2枚（初期の条件のまま）
     setNotice('例として' + hand.ids.length + '枚引いてあるよ。条件を選んで「ガチャを回す」を押してみよう');
@@ -2362,6 +3032,7 @@ a { color: inherit; }
     renderTimerNow();
     refreshTimerMarks();
   }
+  if (TM) renderTeam();
   const fromHash = location.hash.slice(1);
   showTab(TABS.includes(fromHash) ? fromHash : tab, { keepHash: true, keepScroll: true });
 })();
