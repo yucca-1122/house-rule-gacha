@@ -10,10 +10,29 @@ import { ROOT, listGames, loadGame, rel } from './lib.mjs';
 
 const TEMPLATE_FILE = path.join(ROOT, 'app', 'gacha.html');
 const template = fs.readFileSync(TEMPLATE_FILE, 'utf8').replace(/\r\n/g, '\n');
-const HEAD = '<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"></head><body>\n';
 const TAIL = '\n</body></html>\n';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// アイコン（assets/ にあるものだけ付ける）と、スマホのブラウザのバーの色（app/gacha.html の --sea。ライト・ダークの順）
+const ICONS = [
+  ['icon', '32x32', 'favicon-32.png'],
+  ['icon', '192x192', 'icon-192.png'],
+  ['apple-touch-icon', '180x180', 'apple-touch-icon.png']
+];
+const SEA = [...template.matchAll(/--sea:[ \t]*(#[0-9a-fA-F]{3,8})/g)].map((m) => m[1]);
+function headExtras(prefix, shortTitle) {
+  const tags = [];
+  for (const [relName, sizes, file] of ICONS) {
+    if (fs.existsSync(path.join(ROOT, 'assets', file))) tags.push(`<link rel="${relName}" type="image/png" sizes="${sizes}" href="${prefix}assets/${file}">`);
+  }
+  if (shortTitle) tags.push(`<meta name="apple-mobile-web-app-title" content="${esc(shortTitle)}">`);
+  if (SEA[0]) tags.push(`<meta name="theme-color" media="(prefers-color-scheme: light)" content="${SEA[0]}">`);
+  if (SEA[1]) tags.push(`<meta name="theme-color" media="(prefers-color-scheme: dark)" content="${SEA[1]}">`);
+  return tags.join('\n');
+}
+// games/<id>/index.html の頭（アイコンへのパスは2つ上の assets/）
+const headFor = (shortTitle) => '<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n' + headExtras('../../', shortTitle) + '\n</head><body>\n';
 const write = (file, text) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, text); };
 
 function withTitle(html, title) {
@@ -45,7 +64,7 @@ for (const dir of dirs) {
   if (!meta.title) { problems.push(`${rel(dir)}: meta.title が無い`); continue; }
   const rules = Array.isArray(g.data.rules) ? g.data.rules : [];
   const page = withTitle(withTheme(template, dir, g.folder), meta.title);
-  write(path.join(dir, 'index.html'), HEAD + page + TAIL);
+  write(path.join(dir, 'index.html'), headFor(meta.shortTitle || meta.title) + page + TAIL);
   // 埋め込み先のビューアに「左右の余白は max() で取ってある」と伝える設定。単体のページには要らないので、この1枚にだけ足す
   const embedPage = page.replace('</title>', '</title>\n<meta name="claude:viewport-fit-sides" content="cover">');
   write(path.join(ROOT, 'dist', 'artifact', g.folder + '.html'), embedPage);
@@ -89,6 +108,7 @@ const index = `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>改造ルールガチャ</title>
 <meta name="description" content="ボードゲームの改造ルール（ハウスルール）をランダムに引くページ集。">
+${headExtras('', '改造ルールガチャ')}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">

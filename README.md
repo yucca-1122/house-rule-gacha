@@ -42,6 +42,7 @@
 | `games/<ID>/rules.js` | そのゲームのルールのデータ |
 | `games/<ID>/pairs.json` | 両立判定の確認に使う組（任意） |
 | `games/<ID>/index.html` | そのゲームのページ（`tools/build.mjs` が作る） |
+| `assets/` | アイコン（ブラウザのタブ・スマホのホーム画面） |
 | `tools/` | ページを作るスクリプトと、データの検査 |
 | `docs/` | ゲームの足し方 |
 
