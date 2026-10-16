@@ -1,0 +1,2019 @@
+<title>改造ルールガチャ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<!-- 改造ルールガチャの画面（全ゲーム共通の型）。データは同じ場所の rules.js（window.RULE_GACHA）。
+     ゲームごとのページは tools/build.mjs が作る。手順は docs/ゲームの足し方.md -->
+<style>
+/* Layout: 地は海。上に名前とタブ。ガチャは「条件 → 回す → いまのルール → 履歴」の縦1列で、PC は左に条件と履歴・右にいまのルール。紙のカードはルールだけ。 */
+/* @tokens-start ここから @tokens-end までが色と書体のトークン（tools/build.mjs が一覧ページにも写す）。
+   今はカタンの島の色で固定。ゲームごとに変えるときは games/<id>/theme.css（docs/ゲームの足し方.md） */
+:root {
+  color-scheme: light;
+  /* 海（地） */
+  --sea: #1d6a90;
+  --sea-deep: #175878;
+  --sea-shallow: #26789f;
+  --sea-line: rgba(255, 255, 255, .075);
+  --on-sea: #f3f9fc;
+  --on-sea-dim: #d6e8f1;
+  --on-sea-line: rgba(235, 246, 252, .34);
+  /* 紙（ルールのカード） */
+  --paper: #fffdf9;
+  --paper-2: #f0f4f3;
+  --ink: #1a252c;
+  --ink-dim: #55656e;
+  --line: #dde3e2;
+  --edge: rgba(6, 36, 54, .38);
+  --link: #1d6a90;
+  --warn: #a1222d;
+  --pick: #fffdf9;
+  --on-pick: #1a252c;
+  --badge: #1d6a90;
+  --on-badge: #f3f9fc;
+  /* 5つの資源と砂漠 */
+  --forest: #2f6b3b;
+  --brick: #b4532c;
+  --pasture: #8fc244;
+  --wheat: #e6b23a;
+  --ore: #6d7b8a;
+  --sand: #e9d6a6;
+  --on-sand: #3a2d10;
+  --chip-sand: #f1e4c1;
+  --on-chip-sand: #3a2d10;
+  --wheat-edge: #a77916;
+  --on-wheat: #2a1f05;
+  /* 難易度：牧草地 → 小麦 → レンガ → 深い赤 → 鉱石の黒〜夜の紫 */
+  --lv1: #8fc244;
+  --lv1-on: #1b2a0c;
+  --lv2: #e6b23a;
+  --lv2-on: #2a1f05;
+  --lv3: #b8561f;
+  --lv3-on: #ffffff;
+  --lv4: #a1222d;
+  --lv4-on: #ffffff;
+  --lv5: #252230;
+  --lv5-b: #4a3880;
+  --lv5-on: #f1ecff;
+  /* カードの裏・フォーカス */
+  --back: #17506e;
+  --back-line: rgba(255, 255, 255, .2);
+  --focus: #ffd35a;
+  --focus-paper: #1d6a90;
+  /* 書体 */
+  --font-display: "Dela Gothic One", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+  --font-body: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+  /* 六角形 */
+  --hex: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  --hex-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='52' height='90' viewBox='0 0 52 90'%3E%3Cpath d='M0 15L26 0L52 15M52 15V45M0 15V45M52 45L26 60L0 45M26 60V90' fill='none' stroke='%23000' stroke-width='1.3'/%3E%3C/svg%3E");
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --sea: #0b1e2a;
+    --sea-deep: #071620;
+    --sea-shallow: #132b3b;
+    --sea-line: rgba(150, 205, 230, .065);
+    --on-sea: #e1ecf1;
+    --on-sea-dim: #9cb4c1;
+    --on-sea-line: rgba(190, 225, 242, .26);
+    --paper: #162b38;
+    --paper-2: #1e3747;
+    --ink: #e6edf0;
+    --ink-dim: #a3b4bc;
+    --line: #2b4554;
+    --edge: rgba(0, 0, 0, .5);
+    --link: #8fd0ee;
+    --warn: #ff9c9c;
+    --pick: #2f5266;
+    --on-pick: #f0f6f9;
+    --badge: #2f5266;
+    --on-badge: #e6f2f7;
+    --forest: #4f8f5c;
+    --brick: #c96a42;
+    --pasture: #86ba40;
+    --wheat: #dcaa36;
+    --ore: #8c9aa8;
+    --sand: #d9c592;
+    --on-sand: #2f2410;
+    --chip-sand: #3b3322;
+    --on-chip-sand: #f0e2bf;
+    --wheat-edge: #8d6413;
+    --on-wheat: #241a04;
+    --lv1: #7fb03a;
+    --lv1-on: #142008;
+    --lv2: #d9a733;
+    --lv2-on: #241a04;
+    --lv3: #b8561f;
+    --lv3-on: #ffffff;
+    --lv4: #a1222d;
+    --lv4-on: #ffffff;
+    --lv5: #2f2a40;
+    --lv5-b: #5a46a0;
+    --lv5-on: #f1ecff;
+    --back: #102f42;
+    --back-line: rgba(255, 255, 255, .14);
+    --focus: #ffd35a;
+    --focus-paper: #8fd0ee;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --sea: #0b1e2a;
+  --sea-deep: #071620;
+  --sea-shallow: #132b3b;
+  --sea-line: rgba(150, 205, 230, .065);
+  --on-sea: #e1ecf1;
+  --on-sea-dim: #9cb4c1;
+  --on-sea-line: rgba(190, 225, 242, .26);
+  --paper: #162b38;
+  --paper-2: #1e3747;
+  --ink: #e6edf0;
+  --ink-dim: #a3b4bc;
+  --line: #2b4554;
+  --edge: rgba(0, 0, 0, .5);
+  --link: #8fd0ee;
+  --warn: #ff9c9c;
+  --pick: #2f5266;
+  --on-pick: #f0f6f9;
+  --badge: #2f5266;
+  --on-badge: #e6f2f7;
+  --forest: #4f8f5c;
+  --brick: #c96a42;
+  --pasture: #86ba40;
+  --wheat: #dcaa36;
+  --ore: #8c9aa8;
+  --sand: #d9c592;
+  --on-sand: #2f2410;
+  --chip-sand: #3b3322;
+  --on-chip-sand: #f0e2bf;
+  --wheat-edge: #8d6413;
+  --on-wheat: #241a04;
+  --lv1: #7fb03a;
+  --lv1-on: #142008;
+  --lv2: #d9a733;
+  --lv2-on: #241a04;
+  --lv3: #b8561f;
+  --lv3-on: #ffffff;
+  --lv4: #a1222d;
+  --lv4-on: #ffffff;
+  --lv5: #2f2a40;
+  --lv5-b: #5a46a0;
+  --lv5-on: #f1ecff;
+  --back: #102f42;
+  --back-line: rgba(255, 255, 255, .14);
+  --focus: #ffd35a;
+  --focus-paper: #8fd0ee;
+  color-scheme: dark;
+}
+/* @tokens-end */
+
+/* 難易度ごとの色（この属性を持つ要素の中で使う） */
+[data-lv="1"] { --lv: var(--lv1); --lv-2: var(--lv1); --lv-on: var(--lv1-on); }
+[data-lv="2"] { --lv: var(--lv2); --lv-2: var(--lv2); --lv-on: var(--lv2-on); }
+[data-lv="3"] { --lv: var(--lv3); --lv-2: var(--lv3); --lv-on: var(--lv3-on); }
+[data-lv="4"] { --lv: var(--lv4); --lv-2: var(--lv4); --lv-on: var(--lv4-on); }
+[data-lv="5"] { --lv: var(--lv5); --lv-2: var(--lv5-b); --lv-on: var(--lv5-on); }
+
+/* ---------- 土台 ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body {
+  margin: 0;
+  position: relative;
+  z-index: 0;
+  background: var(--sea);
+  color: var(--on-sea);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+/* 海に六角のうすい線 */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--sea-line);
+  -webkit-mask-image: var(--hex-mask);
+  mask-image: var(--hex-mask);
+  -webkit-mask-size: 78px 135px;
+  mask-size: 78px 135px;
+  -webkit-mask-repeat: repeat;
+  mask-repeat: repeat;
+}
+button, input, textarea { font: inherit; color: inherit; }
+button { -webkit-tap-highlight-color: transparent; }
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.card :focus-visible, .sheet :focus-visible, .load-error :focus-visible { outline-color: var(--focus-paper); }
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.page {
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px 64px;
+}
+.wrap { max-width: 1240px; margin-inline: auto; }
+
+/* ---------- 名前 ---------- */
+.masthead { display: flex; align-items: center; gap: 12px; }
+.logo { width: 46px; height: 44px; flex: none; }
+.t-forest { fill: var(--forest); }
+.t-brick { fill: var(--brick); }
+.t-pasture { fill: var(--pasture); }
+.t-wheat { fill: var(--wheat); }
+.t-ore { fill: var(--ore); }
+.t-sand { fill: var(--sand); }
+.masthead-text { min-width: 0; }
+.app-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(20px, 5.6vw, 28px);
+  line-height: 1.2;
+  letter-spacing: .02em;
+  text-wrap: balance;
+}
+.app-sub { margin: 3px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--on-sea-dim); }
+.app-sub b { font-variant-numeric: tabular-nums; color: var(--on-sea); }
+
+/* ---------- タブ ---------- */
+.tabbar {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 10;
+  background: var(--sea);
+  padding-block: 10px;
+  margin-block: 8px 12px;
+}
+.tabs { display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--sea-deep); }
+.tab {
+  flex: 1 1 auto;
+  min-width: 0;
+  appearance: none;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: var(--on-sea-dim);
+  font-weight: 700;
+  font-size: 14.5px;
+  line-height: 1.2;
+  padding: 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.tab:hover { color: var(--on-sea); }
+.tab[aria-selected="true"] { background: var(--pick); color: var(--on-pick); }
+.tab-count {
+  font-size: 11.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--sea);
+  color: var(--on-sea);
+}
+@media (max-width: 359px) { .tab-count { display: none; } }
+@media (min-width: 720px) {
+  .tabs { display: inline-flex; }
+  .tab { flex: 0 0 auto; padding-inline: 20px; }
+}
+
+/* ---------- 共通の部品 ---------- */
+.field { display: grid; gap: 7px; min-width: 0; }
+.field-label { margin: 0; font-size: 12px; font-weight: 700; line-height: 1.4; letter-spacing: .12em; color: var(--on-sea-dim); }
+.btn {
+  appearance: none;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 1.5px solid transparent;
+  background: transparent;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+}
+.btn svg { width: 16px; height: 16px; flex: none; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-sm { padding: 7px 12px; font-size: 13px; }
+.btn-paper { background: var(--paper); color: var(--ink); }
+.btn-paper:hover:not(:disabled) { background: var(--paper-2); }
+.btn-sea-line { border-color: var(--on-sea-line); color: var(--on-sea); }
+.btn-sea-line:hover:not(:disabled) { border-color: var(--on-sea-dim); background: var(--sea-shallow); }
+.btn-line { border-color: var(--link); color: var(--link); }
+.btn-line:hover:not(:disabled) { background: var(--paper-2); }
+.btn-quiet { color: var(--ink-dim); padding-inline: 10px; }
+.btn-quiet:hover:not(:disabled) { color: var(--ink); background: var(--paper-2); }
+.btn.is-in { border-style: dashed; border-color: var(--line); color: var(--ink-dim); }
+.btn.is-armed, .btn.is-armed:hover:not(:disabled) { border-color: var(--focus); color: var(--focus); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  appearance: none;
+  margin: 0;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1.5px dashed var(--on-sea-line);
+  background: transparent;
+  color: var(--on-sea-dim);
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.chip:hover { color: var(--on-sea); border-color: var(--on-sea-dim); }
+.chip[aria-pressed="true"] { border-style: solid; border-color: var(--pick); background: var(--pick); color: var(--on-pick); }
+.chip-n { font-size: 11.5px; font-variant-numeric: tabular-nums; opacity: .72; }
+.chip-dot { flex: none; width: 10px; height: 11.5px; clip-path: var(--hex); background: linear-gradient(160deg, var(--lv-2, var(--ore)), var(--lv, var(--ore))); }
+
+.fold { min-width: 0; }
+.fold > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: var(--sea-deep);
+  color: var(--on-sea);
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.4;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.fold > summary::-webkit-details-marker { display: none; }
+.fold[open] > summary { border-radius: 12px 12px 0 0; }
+.fold-state { font-weight: 400; font-size: 13px; color: var(--on-sea-dim); font-variant-numeric: tabular-nums; }
+.fold-chev { margin-left: auto; width: 14px; height: 14px; flex: none; transition: transform .2s ease; }
+.fold[open] > summary .fold-chev { transform: rotate(180deg); }
+.fold-body {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  padding: 4px 12px 14px;
+  border-radius: 0 0 12px 12px;
+  background: var(--sea-deep);
+}
+
+/* ---------- ガチャ ---------- */
+.gacha {
+  display: grid;
+  gap: 26px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "set" "hand" "hist";
+}
+.g-set { grid-area: set; display: grid; gap: 16px; align-content: start; min-width: 0; }
+.g-hand { grid-area: hand; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.g-hist { grid-area: hist; min-width: 0; }
+@media (min-width: 980px) {
+  .gacha {
+    grid-template-columns: 352px minmax(0, 1fr);
+    grid-template-areas: "set hand" "hist hand";
+    grid-template-rows: auto 1fr;
+    column-gap: 36px;
+    align-items: start;
+  }
+}
+
+/* 難易度のタイル */
+.lv-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.lv-toggle {
+  appearance: none;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: var(--on-sea);
+  padding: 6px 2px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  text-align: center;
+}
+.lv-toggle:hover { background: var(--sea-shallow); }
+.lv-tile {
+  position: relative;
+  width: 46px;
+  max-width: 100%;
+  aspect-ratio: 0.866;
+  clip-path: var(--hex);
+  background: linear-gradient(160deg, var(--lv-2), var(--lv));
+  color: var(--lv-on);
+  display: grid;
+  place-items: center;
+}
+.lv-tile-txt { position: relative; font-family: var(--font-display); font-size: 15px; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.lv-tile-txt i { font-style: normal; font-size: .72em; }
+.lv-toggle[aria-pressed="false"] .lv-tile { background: var(--on-sea-line); color: var(--on-sea-dim); }
+.lv-toggle[aria-pressed="false"] .lv-tile::before { content: ""; position: absolute; inset: 3px; clip-path: var(--hex); background: var(--sea); }
+.lv-toggle:hover[aria-pressed="false"] .lv-tile::before { background: var(--sea-shallow); }
+.lv-name { font-size: 11.5px; font-weight: 700; line-height: 1.25; letter-spacing: -.01em; overflow-wrap: anywhere; }
+.lv-count { font-size: 11px; line-height: 1.2; color: var(--on-sea-dim); font-variant-numeric: tabular-nums; }
+.lv-toggle[aria-pressed="false"] .lv-name { color: var(--on-sea-dim); font-weight: 400; }
+
+/* 枚数・人数 */
+.seg-row { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 2fr); gap: 12px; }
+.seg { position: relative; display: flex; gap: 3px; padding: 3px; border-radius: 12px; background: var(--sea-deep); }
+.seg input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
+.seg label {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  padding: 8px 2px;
+  border-radius: 9px;
+  color: var(--on-sea-dim);
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.seg label small { font-size: 11px; margin-left: 1px; }
+.seg label:hover { color: var(--on-sea); }
+.seg input:checked + label { background: var(--pick); color: var(--on-pick); }
+.seg input:focus-visible + label { outline: 3px solid var(--focus); outline-offset: 1px; }
+
+.set-hint { margin: -6px 0 0; font-size: 13px; font-weight: 700; color: var(--focus); }
+.set-hint:empty { display: none; }
+
+/* 回すボタン */
+.spin {
+  appearance: none;
+  margin: 2px 0 0;
+  width: 100%;
+  min-height: 64px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--wheat);
+  color: var(--on-wheat);
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: .06em;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow: 0 5px 0 var(--wheat-edge);
+  transition: transform .08s ease, box-shadow .08s ease;
+}
+.spin svg { width: 24px; height: 27px; flex: none; }
+.spin:hover:not(:disabled) { filter: brightness(1.04); }
+.spin:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 var(--wheat-edge); }
+.spin:disabled { cursor: not-allowed; opacity: .55; }
+.spin:focus-visible { outline-offset: 4px; }
+.pool-line { margin: 2px 0 0; font-size: 13px; line-height: 1.6; text-align: center; color: var(--on-sea-dim); }
+.pool-line b { font-family: var(--font-display); font-weight: 400; font-size: 16px; color: var(--on-sea); font-variant-numeric: tabular-nums; margin-inline: 3px; }
+
+/* いまのルール */
+.hand-head { display: flex; align-items: baseline; gap: 10px; scroll-margin-top: calc(env(safe-area-inset-top, 0px) + 84px); }
+.hand-title { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 20px; line-height: 1.3; }
+.hand-count { font-family: var(--font-display); font-size: 15px; color: var(--on-sea-dim); font-variant-numeric: tabular-nums; }
+.hand-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.hand-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.tool-msg { margin: 0; font-size: 13px; font-weight: 700; line-height: 1.5; color: var(--on-sea-dim); }
+.tool-msg:empty { display: none; }
+
+.switch { position: relative; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 700; font-size: 14px; line-height: 1.3; color: var(--on-sea); }
+.switch input { position: absolute; left: 0; top: 50%; width: 46px; height: 28px; margin: -14px 0 0; opacity: 0; cursor: pointer; }
+.switch-track { position: relative; flex: none; width: 46px; height: 28px; border-radius: 999px; background: var(--sea-deep); box-shadow: inset 0 0 0 1.5px var(--on-sea-line); transition: background .15s ease; }
+.switch-knob { position: absolute; top: 4px; left: 4px; width: 20px; height: 20px; border-radius: 50%; background: var(--on-sea-dim); transition: transform .15s ease, background .15s ease; }
+.switch input:checked + .switch-track { background: var(--pasture); box-shadow: none; }
+.switch input:checked + .switch-track .switch-knob { transform: translateX(18px); background: var(--on-sea); }
+.switch input:focus-visible + .switch-track { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+.copy-fallback { display: grid; gap: 8px; justify-items: start; padding: 12px; border-radius: 12px; background: var(--sea-deep); }
+.copy-fallback-lead { margin: 0; font-weight: 700; font-size: 14px; line-height: 1.5; }
+.copy-fallback textarea {
+  width: 100%;
+  min-height: 160px;
+  resize: vertical;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.notice {
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--chip-sand);
+  color: var(--on-chip-sand);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.55;
+}
+.notice::before { content: ""; flex: none; width: 12px; height: 13.9px; margin-top: 3px; clip-path: var(--hex); background: var(--brick); }
+
+.hand { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+.hand:empty { display: none; }
+@media (min-width: 640px) {
+  .hand[data-n="1"] { grid-template-columns: minmax(0, 640px); }
+  .hand:not([data-n="1"]) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1100px) {
+  .hand:not([data-n="1"]):not([data-n="2"]):not([data-n="4"]) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+.hand-empty { display: grid; gap: 4px; padding: 18px 16px; border: 2px dashed var(--on-sea-line); border-radius: 14px; }
+.hand-empty p { margin: 0; }
+.hand-empty a { color: var(--on-sea); font-weight: 700; }
+
+/* ---------- ルールのカード ---------- */
+.slot { position: relative; display: grid; min-width: 0; perspective: 1400px; }
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 14px;
+  box-shadow: 0 3px 0 var(--edge);
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.card-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  background: linear-gradient(105deg, var(--lv), var(--lv-2));
+  color: var(--lv-on);
+  line-height: 1.2;
+}
+.stars { font-size: 13px; letter-spacing: .04em; white-space: nowrap; }
+.stars-off { opacity: .3; }
+.card-lv { font-size: 13px; font-weight: 700; }
+.card-no { margin-left: auto; font-family: var(--font-display); font-size: 14px; letter-spacing: .04em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.card-body { flex: 1 1 auto; display: flex; flex-direction: column; gap: 9px; padding: 13px 16px 15px; }
+.card-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 6px; border: 1px solid var(--line); color: var(--ink-dim); font-size: 12px; font-weight: 700; line-height: 1.5; }
+.tag-p { border-color: var(--ore); background: var(--paper-2); color: var(--ink); }
+.card-title { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 20px; line-height: 1.4; letter-spacing: .01em; text-wrap: balance; }
+.card-text { margin: 0; font-size: 15px; line-height: 1.8; white-space: pre-line; }
+.card-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; font-size: 14px; line-height: 1.6; }
+.card-list li { position: relative; padding-left: 17px; }
+.card-list li::before { content: ""; position: absolute; left: 2px; top: .5em; width: 8px; height: 9.2px; clip-path: var(--hex); background: var(--ore); }
+.card-need {
+  margin: 0;
+  align-self: flex-start;
+  max-width: 100%;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  padding: 5px 11px;
+  border-radius: 8px;
+  background: var(--chip-sand);
+  color: var(--on-chip-sand);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.card-need b { font-weight: 700; }
+.card-note { margin: 0; padding-top: 9px; border-top: 1px dashed var(--line); font-size: 13.5px; line-height: 1.7; color: var(--ink-dim); }
+.card-note b { color: var(--ink); margin-right: .6em; }
+.card-actions { margin-top: auto; padding-top: 4px; display: flex; flex-wrap: wrap; gap: 8px; }
+.card-msg { margin: 0; font-size: 13px; font-weight: 700; line-height: 1.5; color: var(--warn); }
+.card-msg[data-tone="ok"] { color: var(--link); }
+.card-msg[data-tone="info"] { color: var(--ink-dim); }
+
+.card--mini .card-strip { padding: 7px 12px; }
+.card--mini .stars, .card--mini .card-lv { font-size: 12px; }
+.card--mini .card-no { font-size: 13px; }
+.card--mini .card-body { gap: 7px; padding: 11px 13px 13px; }
+.card--mini .card-title { font-size: 16.5px; }
+.card--mini .card-text { font-size: 14px; line-height: 1.75; }
+.card--mini .card-list, .card--mini .card-need, .card--mini .card-note { font-size: 13px; }
+
+/* カードの裏と、めくれる演出（ここだけ動く） */
+.card-back {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--back);
+  box-shadow: 0 3px 0 var(--edge);
+  overflow: hidden;
+}
+.card-back::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: var(--back-line);
+  -webkit-mask-image: var(--hex-mask);
+  mask-image: var(--hex-mask);
+  -webkit-mask-size: 39px 67.5px;
+  mask-size: 39px 67.5px;
+}
+.card-back-mark {
+  position: relative;
+  width: 70px;
+  height: 80.8px;
+  clip-path: var(--hex);
+  background: var(--sand);
+  color: var(--on-sand);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: 34px;
+  line-height: 1;
+}
+.slot.is-dealing > .card,
+.slot.is-dealing > .card-back {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  animation-duration: .72s;
+  animation-timing-function: cubic-bezier(.3, .75, .25, 1);
+  animation-delay: var(--delay, 0ms);
+  animation-fill-mode: both;
+}
+.slot.is-dealing > .card { animation-name: face-in; }
+.slot.is-dealing > .card-back { animation-name: back-out; }
+@keyframes face-in { from { transform: rotateY(180deg); } to { transform: rotateY(0deg); } }
+@keyframes back-out { from { transform: rotateY(0deg); } to { transform: rotateY(-180deg); } }
+
+/* 履歴 */
+.hist { list-style: none; margin: 0; padding: 0; display: grid; width: 100%; }
+.hist-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 10px; padding: 11px 0; border-top: 1px solid var(--on-sea-line); }
+.hist-item:first-child { border-top: 0; }
+.hist-time { font-size: 12.5px; color: var(--on-sea-dim); font-variant-numeric: tabular-nums; }
+.hist-now { justify-self: end; padding: 3px 10px; border-radius: 999px; background: var(--pick); color: var(--on-pick); font-size: 12px; font-weight: 700; line-height: 1.4; }
+.hist-back { justify-self: end; }
+.hist-rules { grid-column: 1 / -1; margin: 0; padding: 0; list-style: none; display: grid; gap: 3px; font-size: 13.5px; line-height: 1.45; }
+.hist-rules li { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+.hist-rules li::before { content: ""; flex: none; width: 9px; height: 10.4px; margin-top: .3em; clip-path: var(--hex); background: var(--lv-2, var(--ore)); }
+.hist-no { flex: none; font-size: 12px; color: var(--on-sea-dim); font-variant-numeric: tabular-nums; }
+.hist-empty { margin: 0; font-size: 13px; color: var(--on-sea-dim); }
+.hist-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+
+/* ---------- ぜんぶ見る ---------- */
+.list-filter { display: grid; gap: 12px; margin-bottom: 16px; }
+.search { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 14px; border-radius: 12px; background: var(--paper); color: var(--ink); cursor: text; }
+.search:focus-within { outline: 3px solid var(--focus); outline-offset: 2px; }
+.search svg { width: 18px; height: 18px; flex: none; color: var(--ink-dim); }
+.search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: 12px 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.3;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.search input::placeholder { color: var(--ink-dim); opacity: 1; }
+.list-count-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.list-count { margin: 0; font-size: 14px; color: var(--on-sea-dim); font-variant-numeric: tabular-nums; }
+.list-count b { font-family: var(--font-display); font-weight: 400; font-size: 18px; color: var(--on-sea); margin-right: 2px; }
+.list-grid { display: flex; align-items: flex-start; gap: 14px; }
+.list-col { flex: 1 1 0; min-width: 0; display: grid; gap: 14px; }
+.list-empty { padding: 18px 16px; border: 2px dashed var(--on-sea-line); border-radius: 14px; }
+.list-empty p { margin: 0; }
+
+/* ---------- 遊び方 ---------- */
+.sheet { padding: 22px 18px 24px; border-radius: 18px; background: var(--paper); color: var(--ink); box-shadow: 0 3px 0 var(--edge); }
+.sheet-title { margin: 0 0 18px; font-family: var(--font-display); font-weight: 400; font-size: 24px; line-height: 1.3; }
+.sheet-body { display: grid; gap: 28px; }
+.sheet-body h3 { margin: 0 0 12px; display: flex; align-items: center; gap: 9px; font-family: var(--font-display); font-weight: 400; font-size: 17px; line-height: 1.4; }
+.sheet-body h3::before { content: ""; flex: none; width: 12px; height: 13.9px; clip-path: var(--hex); background: var(--link); }
+@media (min-width: 980px) {
+  .sheet { padding: 30px 36px 32px; }
+  .sheet-body { display: block; column-count: 2; column-gap: 52px; }
+  .sheet-body > section { break-inside: avoid; margin-bottom: 32px; }
+}
+.steps { list-style: none; margin: 0; padding: 0; counter-reset: step; display: grid; gap: 12px; }
+.steps li { counter-increment: step; display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 12px; align-items: start; line-height: 1.7; }
+.steps li::before {
+  content: counter(step);
+  width: 28px;
+  height: 32.3px;
+  clip-path: var(--hex);
+  background: var(--badge);
+  color: var(--on-badge);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: 14px;
+  line-height: 1;
+}
+.lv-desc { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.lv-desc li { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; align-items: center; }
+.lv-desc .lv-tile { width: 42px; }
+.lv-desc-name { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; font-weight: 700; line-height: 1.4; }
+.lv-desc-count { font-size: 12.5px; font-weight: 400; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+.lv-desc-text { margin: 2px 0 0; font-size: 14px; line-height: 1.6; color: var(--ink-dim); }
+.combos { display: grid; gap: 10px; }
+.combo { display: grid; gap: 6px; justify-items: start; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; }
+.combo-name { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 16px; line-height: 1.35; }
+.combo-pick { margin: 0; padding: 2px 10px; border-radius: 999px; background: var(--chip-sand); color: var(--on-chip-sand); font-size: 13px; font-weight: 700; line-height: 1.6; }
+.combo-desc { margin: 0; font-size: 14px; line-height: 1.65; color: var(--ink-dim); }
+.basics { display: grid; gap: 18px; }
+.table-wrap { overflow-x: auto; }
+.quick { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.55; }
+.quick caption { padding-bottom: 6px; text-align: left; font-weight: 700; }
+.quick th, .quick td { padding: 7px 10px; border-top: 1px solid var(--line); text-align: left; vertical-align: top; }
+.quick tr:last-child th, .quick tr:last-child td { border-bottom: 1px solid var(--line); }
+.quick th { width: 36%; font-weight: 700; }
+.res { white-space: nowrap; }
+.res::before { content: ""; display: inline-block; width: .6em; height: .69em; margin-right: .22em; clip-path: var(--hex); background: var(--res, var(--ore)); vertical-align: -.04em; }
+.res-forest { --res: var(--forest); }
+.res-brick { --res: var(--brick); }
+.res-pasture { --res: var(--pasture); }
+.res-wheat { --res: var(--wheat); }
+.res-ore { --res: var(--ore); }
+.res-sand { --res: var(--sand); }
+.disclaimer { margin: 26px 0 0; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; line-height: 1.7; color: var(--ink-dim); }
+.updated { margin: 4px 0 0; font-size: 12px; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+
+/* ---------- 読めなかったとき ---------- */
+.load-error { display: grid; gap: 10px; max-width: 640px; margin-top: 22px; padding: 22px 20px; border-radius: 18px; background: var(--paper); color: var(--ink); box-shadow: 0 3px 0 var(--edge); }
+.load-error h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 20px; line-height: 1.4; }
+.load-error p { margin: 0; line-height: 1.75; }
+.load-error code { padding: 1px 6px; border-radius: 6px; background: var(--paper-2); font-family: ui-monospace, Consolas, monospace; font-size: .92em; }
+.load-error-detail { color: var(--warn); font-weight: 700; }
+
+@media (prefers-reduced-motion: reduce) {
+  .slot.is-dealing > .card, .slot.is-dealing > .card-back { animation: none; }
+  .slot > .card-back { display: none; }
+  .spin, .switch-track, .switch-knob, .fold-chev { transition: none; }
+}
+</style>
+
+<div class="page">
+  <div class="wrap">
+    <header class="masthead" id="masthead">
+      <svg class="logo" viewBox="-26 -25 52 50" aria-hidden="true">
+        <polygon class="t-sand" points="0,-9.2 7.97,-4.6 7.97,4.6 0,9.2 -7.97,4.6 -7.97,-4.6"/>
+        <polygon class="t-wheat" points="17.32,-9.2 25.29,-4.6 25.29,4.6 17.32,9.2 9.35,4.6 9.35,-4.6"/>
+        <polygon class="t-forest" points="8.66,5.8 16.63,10.4 16.63,19.6 8.66,24.2 0.69,19.6 0.69,10.4"/>
+        <polygon class="t-brick" points="-8.66,5.8 -0.69,10.4 -0.69,19.6 -8.66,24.2 -16.63,19.6 -16.63,10.4"/>
+        <polygon class="t-pasture" points="-17.32,-9.2 -9.35,-4.6 -9.35,4.6 -17.32,9.2 -25.29,4.6 -25.29,-4.6"/>
+        <polygon class="t-ore" points="-8.66,-24.2 -0.69,-19.6 -0.69,-10.4 -8.66,-5.8 -16.63,-10.4 -16.63,-19.6"/>
+        <polygon class="t-forest" points="8.66,-24.2 16.63,-19.6 16.63,-10.4 8.66,-5.8 0.69,-10.4 0.69,-19.6"/>
+      </svg>
+      <div class="masthead-text">
+        <h1 class="app-title" id="app-title">改造ルールガチャ</h1>
+        <p class="app-sub" id="app-sub">ハウスルール集</p>
+      </div>
+    </header>
+
+    <div class="tabbar" id="tabbar">
+      <div class="tabs" id="tabs" role="tablist" aria-label="画面のきりかえ">
+        <button type="button" class="tab" role="tab" id="tab-gacha" aria-controls="panel-gacha" aria-selected="true">ガチャ</button>
+        <button type="button" class="tab" role="tab" id="tab-list" aria-controls="panel-list" aria-selected="false" tabindex="-1">ぜんぶ見る<span class="tab-count" id="tab-list-count"></span></button>
+        <button type="button" class="tab" role="tab" id="tab-howto" aria-controls="panel-howto" aria-selected="false" tabindex="-1">遊び方</button>
+      </div>
+    </div>
+
+    <main id="main">
+      <!-- ガチャ -->
+      <section class="panel gacha" id="panel-gacha" role="tabpanel" aria-labelledby="tab-gacha">
+        <div class="g-set">
+          <h2 class="sr-only">引く条件</h2>
+          <div class="field">
+            <p class="field-label" id="lv-label">難易度</p>
+            <div class="lv-row" id="lv-row" role="group" aria-labelledby="lv-label"></div>
+          </div>
+          <div class="seg-row" id="seg-row">
+            <div class="field">
+              <p class="field-label" id="count-label">枚数</p>
+              <div class="seg" id="count-seg" role="radiogroup" aria-labelledby="count-label"></div>
+            </div>
+            <div class="field" id="players-field">
+              <p class="field-label" id="players-label">人数</p>
+              <div class="seg" id="players-seg" role="radiogroup" aria-labelledby="players-label"></div>
+            </div>
+          </div>
+          <details class="fold" id="cat-fold">
+            <summary><span>ジャンル</span><span class="fold-state" id="cat-summary"></span><svg class="fold-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="m3.5 6 4.5 4.5L12.5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
+            <div class="fold-body">
+              <div class="chips" id="cat-row" role="group" aria-label="ジャンル"></div>
+              <button type="button" class="btn btn-sea-line btn-sm" id="cat-all">ぜんぶオンにする</button>
+            </div>
+          </details>
+          <p class="set-hint" id="set-hint" role="status" aria-live="polite"></p>
+          <button type="button" class="spin" id="spin"><svg viewBox="0 0 24 27" aria-hidden="true"><path d="M12 1.6 22.4 7.6v11.8L12 25.4 1.6 19.4V7.6Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><circle cx="12" cy="13.5" r="2.7" fill="currentColor"/></svg>ガチャを回す</button>
+          <p class="pool-line" id="pool-line" aria-live="polite"></p>
+        </div>
+
+        <div class="g-hand">
+          <div class="hand-head" id="hand-head">
+            <h2 class="hand-title">いまのルール</h2>
+            <span class="hand-count" id="hand-count"></span>
+          </div>
+          <div class="hand-tools">
+            <div class="hand-btns">
+              <button type="button" class="btn btn-paper" id="copy-text"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 8.5V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7.5a2 2 0 0 0 2 2h2.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>テキストでコピー</button>
+              <button type="button" class="btn btn-sea-line" id="add-one"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>1枚足す</button>
+            </div>
+            <label class="switch" for="wake-toggle"><input type="checkbox" id="wake-toggle" role="switch"><span class="switch-track" aria-hidden="true"><span class="switch-knob"></span></span><span>画面をつけたままにする</span></label>
+          </div>
+          <p class="tool-msg" id="tool-msg" role="status" aria-live="polite"></p>
+          <div class="copy-fallback" id="copy-fallback-box" hidden>
+            <p class="copy-fallback-lead">コピーできなかったので、下の文字を長押しでコピーしてね</p>
+            <label class="sr-only" for="copy-fallback">コピーする文章</label>
+            <textarea id="copy-fallback" rows="8" spellcheck="false"></textarea>
+            <button type="button" class="btn btn-sea-line btn-sm" id="copy-fallback-close">閉じる</button>
+          </div>
+          <p class="notice" id="hand-notice" role="status" aria-live="polite" hidden></p>
+          <div class="hand" id="hand"></div>
+          <div class="hand-empty" id="hand-empty" hidden>
+            <p><b>いまのルールは空っぽだよ。</b></p>
+            <p>「ガチャを回す」か、<a href="#list">ぜんぶ見る</a>から入れよう。</p>
+          </div>
+        </div>
+
+        <div class="g-hist">
+          <details class="fold" id="hist-fold">
+            <summary><span>これまでの組み合わせ</span><span class="fold-state" id="hist-count"></span><svg class="fold-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="m3.5 6 4.5 4.5L12.5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
+            <div class="fold-body">
+              <ol class="hist" id="hist-list"></ol>
+              <p class="hist-empty" id="hist-empty">まだないよ。ガチャを回すと、ここに最近20回ぶん残るよ。</p>
+              <div class="hist-foot">
+                <button type="button" class="btn btn-sea-line btn-sm" id="hist-clear">履歴を消す</button>
+                <span class="tool-msg" id="hist-msg" role="status" aria-live="polite"></span>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <!-- ぜんぶ見る -->
+      <section class="panel" id="panel-list" role="tabpanel" aria-labelledby="tab-list" hidden>
+        <h2 class="sr-only">ぜんぶのルール</h2>
+        <div class="list-filter">
+          <label class="search" for="list-search">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="m15.5 15.5 5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            <span class="sr-only">ことばで探す</span>
+            <input type="search" id="list-search" placeholder="ことばで探す" autocomplete="off" enterkeyhint="search">
+          </label>
+          <div class="field">
+            <p class="field-label" id="list-lv-label">難易度</p>
+            <div class="chips" id="list-lv" role="group" aria-labelledby="list-lv-label"></div>
+          </div>
+          <details class="fold" id="list-cat-fold">
+            <summary><span>ジャンル</span><span class="fold-state" id="list-cat-summary"></span><svg class="fold-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="m3.5 6 4.5 4.5L12.5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
+            <div class="fold-body">
+              <div class="chips" id="list-cat" role="group" aria-label="ジャンルでしぼる"></div>
+            </div>
+          </details>
+          <div class="list-count-row">
+            <p class="list-count" id="list-count" role="status" aria-live="polite"></p>
+            <button type="button" class="btn btn-sea-line btn-sm" id="list-reset" hidden>しぼりこみを戻す</button>
+          </div>
+        </div>
+        <div class="list-grid" id="list-grid"></div>
+        <div class="list-empty" id="list-empty" hidden>
+          <p>見つからなかったよ。ことばを短くするか、しぼりこみを戻してみて。</p>
+        </div>
+      </section>
+
+      <!-- 遊び方 -->
+      <section class="panel" id="panel-howto" role="tabpanel" aria-labelledby="tab-howto" hidden>
+        <article class="sheet">
+          <h2 class="sheet-title">遊び方</h2>
+          <div class="sheet-body">
+            <section aria-labelledby="h-use">
+              <h3 id="h-use">使い方</h3>
+              <ol class="steps">
+                <li><span>難易度・枚数<span id="step-players">・人数</span>を選んで、<b>「ガチャを回す」</b>を押す。</span></li>
+                <li><span>気に入らないカードは<b>「引き直す」</b>、使わないカードは<b>「外す」</b>。好きなルールは「ぜんぶ見る」から入れられるよ。</span></li>
+                <li><span>決まったら<b>「テキストでコピー」</b>で LINE に貼って、みんなで読もう。</span></li>
+                <li><span>遊んでいる間は<b>「画面をつけたままにする」</b>をオンにして机に置いておこう。途中でルールを増やすときは「1枚足す」。</span></li>
+              </ol>
+            </section>
+            <section aria-labelledby="h-lv">
+              <h3 id="h-lv">難易度</h3>
+              <ul class="lv-desc" id="howto-levels"></ul>
+            </section>
+            <section aria-labelledby="h-combo" id="howto-combos-sec">
+              <h3 id="h-combo">おすすめの引き方</h3>
+              <div class="combos" id="howto-combos"></div>
+            </section>
+            <section aria-labelledby="h-basic" id="howto-basics-sec">
+              <h3 id="h-basic">基本ルールの早見表</h3>
+              <div class="basics" id="howto-basics"></div>
+            </section>
+          </div>
+          <p class="disclaimer" id="howto-disclaimer" hidden></p>
+          <p class="updated" id="howto-updated"></p>
+        </article>
+      </section>
+
+      <!-- データが読めなかったとき -->
+      <section class="load-error" id="load-error" role="alert" hidden>
+        <h2>ルールのデータが読み込めなかったよ</h2>
+        <p class="load-error-detail" id="load-error-detail"></p>
+        <p>このページと同じ場所に <code>rules.js</code> があるか、中身が <code>window.RULE_GACHA = { … }</code> の形になっているかを確かめてね。</p>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script src="rules.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  const $ = (id) => document.getElementById(id);
+  const HISTORY_MAX = 20;      // 履歴に残す回数
+  const RECENT_N = 3;          // 「直近◯回」に出たルールはなるべく避ける
+  const OTHER = '__other';     // cats に無いジャンルのルールの置き場
+  const TABS = ['gacha', 'list', 'howto'];
+  const LIST_MIN_W = 290;      // ぜんぶ見るの1列の最小幅
+  const LIST_GAP = 14;
+  const motionQuery = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+  const reduced = () => !!(motionQuery && motionQuery.matches);
+
+  // ---------- 小道具 ----------
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function button(cls, text, id) {
+    const b = el('button', cls, text);
+    b.type = 'button';
+    if (id) b.id = id;
+    return b;
+  }
+  function str(v) {
+    if (typeof v === 'string') return v.trim();
+    if (typeof v === 'number' && Number.isFinite(v)) return String(v);
+    return '';
+  }
+  function strList(v) {
+    if (Array.isArray(v)) return v.map(str).filter(Boolean);
+    const s = str(v);
+    return s ? [s] : [];
+  }
+  function clampLv(v) {
+    const n = Math.round(Number(v));
+    if (!Number.isFinite(n)) return 1;
+    return Math.min(5, Math.max(1, n));
+  }
+  // 検索用：全角半角・大文字小文字・カタカナひらがなをそろえる
+  function fold(s) {
+    let t = String(s || '');
+    try { t = t.normalize('NFKC'); } catch (e) { /* そのまま */ }
+    return t.toLowerCase().replace(/[ァ-ヶ]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0x60));
+  }
+  const noStr = (id) => 'No.' + String(id).padStart(3, '0');
+  const safeKey = (k) => String(k).replace(/[^A-Za-z0-9_-]/g, (c) => '_' + c.charCodeAt(0).toString(16));
+  function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  const newId = () => 'h' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const circled = (n) => (n >= 1 && n <= 20 ? String.fromCharCode(0x245f + n) : '(' + n + ')');
+  const WEEK = '日月火水木金土';
+  function fmtTime(t) {
+    const d = new Date(t);
+    return (d.getMonth() + 1) + '/' + d.getDate() + '（' + WEEK[d.getDay()] + '）' + d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+  const sameIds = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+  const overlap = (a, b) => a.some((v) => b.includes(v));
+  // 両立しない：x が1つでも重なる、または一方の ban と他方の req が重なる
+  const clash = (a, b) => a.id === b.id || overlap(a.x, b.x) || overlap(a.ban, b.req) || overlap(b.ban, a.req);
+
+  // ---------- データを読む ----------
+  const intList = (v) => (Array.isArray(v) ? [...new Set(v.map(Number).filter((n) => Number.isInteger(n) && n > 0))].sort((a, b) => a - b) : []);
+  const COLOR_KEYS = ['forest', 'brick', 'pasture', 'wheat', 'ore', 'sand'];   // 早見表の六角形の色（CSS の .res-*）
+  // meta から、ゲームごとの名前・人数・枚数などを読む（無ければ汎用の値）
+  function readMeta(meta) {
+    const o = {};
+    o.id = str(meta.id).toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'game';
+    o.title = str(meta.title) || '改造ルールガチャ';
+    o.subtitle = str(meta.subtitle);
+    o.copyTitle = str(meta.copyTitle) || '今日のハウスルール';
+    o.disclaimer = str(meta.disclaimer);
+    o.searchExamples = strList(meta.searchExamples);
+    o.oldStoreKeys = strList(meta.oldStoreKeys);
+    const draw = meta.draw && typeof meta.draw === 'object' ? meta.draw : {};
+    o.counts = intList(draw.choices).filter((n) => n <= 20);
+    if (!o.counts.length) o.counts = [1, 2, 3, 4, 5];
+    o.countDefault = o.counts.includes(Number(draw.default)) ? Number(draw.default) : (o.counts.includes(2) ? 2 : o.counts[0]);
+    const pl = meta.players && typeof meta.players === 'object' ? meta.players : {};
+    o.players = intList(Array.isArray(meta.players) ? meta.players : pl.choices);
+    o.playersDefault = o.players.includes(Number(pl.default)) ? Number(pl.default) : (o.players.length ? o.players[o.players.length - 1] : 0);
+    o.startLv = intList(meta.startLv).filter((v) => v <= 5);
+    if (!o.startLv.length) o.startLv = [1, 2];
+    o.colorWords = [];
+    if (meta.colorWords && typeof meta.colorWords === 'object') {
+      Object.keys(meta.colorWords).forEach((w) => {
+        const k = str(meta.colorWords[w]);
+        if (str(w) && COLOR_KEYS.includes(k)) o.colorWords.push([str(w), k]);
+      });
+      o.colorWords.sort((a, b) => b[0].length - a[0].length);   // 長いことばを先に当てる
+    }
+    return o;
+  }
+  function normalize(src) {
+    if (!src || typeof src !== 'object') return { error: 'missing' };
+    if (!Array.isArray(src.rules)) return { error: 'norules' };
+    const meta = src.meta && typeof src.meta === 'object' ? src.meta : {};
+    const levels = {};
+    for (let lv = 1; lv <= 5; lv++) levels[lv] = { name: '', desc: '' };
+    if (Array.isArray(src.levels)) {
+      src.levels.forEach((l) => {
+        if (!l || typeof l !== 'object') return;
+        levels[clampLv(l.lv)] = { name: str(l.name), desc: str(l.desc) };
+      });
+    }
+    const catList = [];
+    const catMap = new Map();
+    if (Array.isArray(src.cats)) {
+      src.cats.forEach((c) => {
+        if (!c || typeof c !== 'object') return;
+        const key = str(c.key);
+        if (!key || key === OTHER || catMap.has(key)) return;
+        const o = { key, name: str(c.name) || key };
+        catList.push(o);
+        catMap.set(key, o);
+      });
+    }
+    let maxId = 0;
+    src.rules.forEach((r) => { if (r && Number.isInteger(Number(r.id))) maxId = Math.max(maxId, Number(r.id)); });
+    const used = new Set();
+    const rules = [];
+    let hasOther = false;
+    src.rules.forEach((r) => {
+      if (!r || typeof r !== 'object') return;
+      let id = Number(r.id);
+      if (!Number.isInteger(id) || id < 0 || used.has(id)) id = ++maxId;
+      used.add(id);
+      let cat = str(r.cat);
+      if (!catMap.has(cat)) { cat = OTHER; hasOther = true; }
+      const p = Number(r.p);
+      rules.push({
+        id,
+        lv: clampLv(r.lv),
+        cat,
+        title: str(r.title) || '（名前のないルール）',
+        text: str(r.text),
+        list: strList(r.list),
+        note: str(r.note),
+        need: str(r.need),
+        p: Number.isInteger(p) && p > 0 ? p : 0,
+        x: strList(r.x),
+        req: strList(r.req),
+        ban: strList(r.ban),
+      });
+    });
+    if (!rules.length) return { error: 'empty' };
+    if (hasOther) {
+      const o = { key: OTHER, name: '未分類' };
+      catList.push(o);
+      catMap.set(OTHER, o);
+    }
+    rules.sort((a, b) => a.id - b.id);
+    rules.forEach((r) => { r.hay = fold([noStr(r.id), r.title, r.text, r.list.join('\n'), r.note].join('\n')); });
+    return {
+      meta,
+      ...readMeta(meta),
+      levels,
+      cats: catList.filter((c) => rules.some((r) => r.cat === c.key)),   // ルールの無いジャンルは出さない
+      catMap,
+      rules,
+      byId: new Map(rules.map((r) => [r.id, r])),
+      basics: Array.isArray(src.basics) ? src.basics.filter((b) => b && typeof b === 'object') : [],
+      combos: Array.isArray(src.combos) ? src.combos.filter((c) => c && typeof c === 'object') : [],
+    };
+  }
+
+  function showLoadError(kind) {
+    const detail = {
+      missing: 'rules.js が見つからないか、window.RULE_GACHA が書かれていないみたい。',
+      norules: 'rules.js に rules（ルールの一覧）が無いみたい。',
+      empty: 'rules.js のルールが0件だよ。',
+    }[kind] || 'rules.js の中身が読めなかったよ。';
+    $('load-error-detail').textContent = detail;
+    $('load-error').hidden = false;
+    $('tabbar').hidden = true;
+    TABS.forEach((t) => { $('panel-' + t).hidden = true; });
+    $('app-sub').textContent = 'ルールのデータを待っているよ';
+  }
+
+  let source = null;
+  try {
+    // 古い名前（window.CATAN_RULES）でも読む
+    source = window.RULE_GACHA || window.CATAN_RULES
+      || (typeof RULE_GACHA !== 'undefined' ? RULE_GACHA : null)      // eslint-disable-line no-undef
+      || (typeof CATAN_RULES !== 'undefined' ? CATAN_RULES : null);   // eslint-disable-line no-undef
+  } catch (e) { source = null; }
+  const D = normalize(source);
+  if (D.error) { showLoadError(D.error); return; }
+
+  const lvName = (lv) => (D.levels[lv] && D.levels[lv].name) || '';
+  const lvLabel = (lv) => '★' + lv + (lvName(lv) ? ' ' + lvName(lv) : '');
+  const catName = (key) => (D.catMap.get(key) || { name: '未分類' }).name;
+  const COUNTS = D.counts;      // 枚数の選択肢
+  const PLAYERS = D.players;    // 人数の選択肢（2つ以上のときだけ行を出す）
+  // 保存はゲームごと（同じ場所に複数のゲームを置いても混ざらない）
+  const STORE_KEY = 'house-rule-gacha:' + D.id + ':v1';
+
+  // ---------- 保存（できなくても動く） ----------
+  function loadSaved() {
+    try {
+      let s = localStorage.getItem(STORE_KEY);
+      if (!s) {
+        // 前の名前で保存していたら、1回だけ引き継ぐ（新しい名前で保存したあとは見ない）
+        for (const k of D.oldStoreKeys) {
+          const old = localStorage.getItem(k);
+          if (old) { s = old; localStorage.setItem(STORE_KEY, old); break; }
+        }
+      }
+      if (!s) return null;
+      const o = JSON.parse(s);
+      return o && typeof o === 'object' ? o : null;
+    } catch (e) { return null; }
+  }
+  const validIds = (a) => (Array.isArray(a) ? [...new Set(a.map(Number).filter((id) => D.byId.has(id)))] : []);
+  function readSettings(s) {
+    const o = { lv: D.startLv.slice(), n: D.countDefault, players: PLAYERS.length ? D.playersDefault : 0, catOff: [] };
+    if (!s || typeof s !== 'object') return o;
+    if (Array.isArray(s.lv)) {
+      const lv = [...new Set(s.lv.map(Number).filter((v) => Number.isInteger(v) && v >= 1 && v <= 5))].sort((a, b) => a - b);
+      if (lv.length) o.lv = lv;
+    }
+    if (COUNTS.includes(Number(s.n))) o.n = Number(s.n);
+    if (PLAYERS.includes(Number(s.players))) o.players = Number(s.players);
+    if (Array.isArray(s.catOff)) {
+      const off = [...new Set(s.catOff.map(String).filter((k) => D.cats.some((c) => c.key === k)))];
+      if (off.length < D.cats.length) o.catOff = off;
+    }
+    return o;
+  }
+  function readHand(h) {
+    if (!h || typeof h !== 'object') return { ids: [], hid: null, seen: [] };
+    return { ids: validIds(h.ids), hid: typeof h.hid === 'string' ? h.hid : null, seen: validIds(h.seen) };
+  }
+  function readHistory(a) {
+    if (!Array.isArray(a)) return [];
+    const out = [];
+    a.forEach((e) => {
+      if (!e || typeof e !== 'object') return;
+      const ids = validIds(e.ids);
+      if (!ids.length) return;
+      out.push({ id: typeof e.id === 'string' ? e.id : newId(), t: Number(e.t) || Date.now(), ids, seen: validIds(e.seen) });
+    });
+    return out.slice(0, HISTORY_MAX);
+  }
+
+  const saved = loadSaved();
+  const firstRun = !saved;
+  const settings = readSettings(saved && saved.settings);
+  let hand = readHand(saved && saved.hand);       // いまのルール
+  let hist = readHistory(saved && saved.history); // これまでの組み合わせ（新しい順）
+  let tab = saved && TABS.includes(saved.tab) ? saved.tab : 'gacha';
+
+  function save() {
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify({ v: 1, settings, hand, history: hist, tab }));
+    } catch (e) { /* 保存できなくても続ける */ }
+  }
+
+  // ---------- 抽選 ----------
+  // p（◯人専用）は、人数を選べるゲームのときだけ見る
+  const fitsPlayers = (r) => !r.p || !settings.players || r.p === settings.players;
+  const fits = (r) => settings.lv.includes(r.lv) && !settings.catOff.includes(r.cat) && fitsPlayers(r);
+  const pool = () => D.rules.filter(fits);
+  const handRules = () => hand.ids.map((id) => D.byId.get(id)).filter(Boolean);
+  function recentSet() {
+    const s = new Set();
+    hist.slice(0, RECENT_N).forEach((e) => { e.ids.forEach((id) => s.add(id)); e.seen.forEach((id) => s.add(id)); });
+    hand.ids.forEach((id) => s.add(id));
+    hand.seen.forEach((id) => s.add(id));
+    return s;
+  }
+  // cands から、keep とも互いとも両立する n 枚を引く。avoid にあるものは足りないときだけ使う
+  function drawSet(cands, n, avoid, keep) {
+    const fresh = cands.filter((r) => !avoid.has(r.id));
+    const stale = cands.filter((r) => avoid.has(r.id));
+    let best = [];
+    let bestStale = Infinity;
+    for (let t = 0; t < 40; t++) {
+      const order = shuffle(fresh.slice()).concat(shuffle(stale.slice()));
+      const got = [];
+      let st = 0;
+      for (const r of order) {
+        if (got.length >= n) break;
+        if (keep.some((k) => clash(k, r)) || got.some((g) => clash(g, r))) continue;
+        got.push(r);
+        if (avoid.has(r.id)) st++;
+      }
+      if (got.length > best.length || (got.length === best.length && st < bestStale)) { best = got; bestStale = st; }
+      if (best.length === n && bestStale === 0) break;
+    }
+    return { picked: best, stale: best.length ? bestStale : 0 };
+  }
+  function pushHistory(entry) {
+    hist.unshift(entry);
+    if (hist.length > HISTORY_MAX) hist.length = HISTORY_MAX;
+  }
+  // いまのルールが変わったら、つながっている履歴も同じにする
+  function syncHistory() {
+    if (!hand.ids.length) return;
+    let e = hand.hid ? hist.find((h) => h.id === hand.hid) : null;
+    if (!e) {
+      e = { id: newId(), t: Date.now(), ids: [], seen: [] };
+      hand.hid = e.id;
+      pushHistory(e);
+    }
+    e.ids = hand.ids.slice();
+    hand.seen.forEach((id) => { if (!e.seen.includes(id)) e.seen.push(id); });
+  }
+  function spin() {
+    const cands = pool();
+    const n = settings.n;
+    if (!cands.length) return { ok: false, msg: 'いまの条件だと引けるルールがないよ。難易度かジャンルを増やしてみて' };
+    const { picked, stale } = drawSet(cands, n, recentSet(), []);
+    hand = { ids: picked.map((r) => r.id), hid: newId(), seen: picked.map((r) => r.id) };
+    pushHistory({ id: hand.hid, t: Date.now(), ids: hand.ids.slice(), seen: hand.seen.slice() });
+    let msg = '';
+    if (picked.length < n) {
+      msg = cands.length < n && picked.length === cands.length
+        ? '条件に合うルールが' + cands.length + '件だけだから、' + picked.length + '枚引いたよ'
+        : 'いっしょに使えるルールが足りなくて、' + picked.length + '枚だけ引いたよ';
+    } else if (stale > 0) {
+      msg = '候補が少ないから、最近出たルールもまぜたよ';
+    }
+    return { ok: true, msg };
+  }
+
+  // ---------- カード ----------
+  function buildCard(r, mini) {
+    const card = el('article', mini ? 'card card--mini' : 'card');
+    card.dataset.lv = r.lv;
+    const strip = el('div', 'card-strip');
+    const stars = el('span', 'stars');
+    stars.setAttribute('aria-hidden', 'true');
+    stars.append(el('span', 'stars-on', '★'.repeat(r.lv)));
+    if (r.lv < 5) stars.append(el('span', 'stars-off', '★'.repeat(5 - r.lv)));
+    strip.append(stars, el('span', 'sr-only', '難易度★' + r.lv));
+    if (lvName(r.lv)) strip.append(el('span', 'card-lv', lvName(r.lv)));
+    strip.append(el('span', 'card-no', noStr(r.id)));
+    const body = el('div', 'card-body');
+    const tags = el('div', 'card-tags');
+    tags.append(el('span', 'tag', catName(r.cat)));
+    if (r.p) tags.append(el('span', 'tag tag-p', r.p + '人専用'));
+    body.append(tags, el('h3', 'card-title', r.title));
+    if (r.text) body.append(el('p', 'card-text', r.text));
+    if (r.list.length) {
+      const ul = el('ul', 'card-list');
+      r.list.forEach((s) => ul.append(el('li', null, s)));
+      body.append(ul);
+    }
+    if (r.need) {
+      const p = el('p', 'card-need');
+      p.append(el('b', null, '用意するもの'), document.createTextNode(r.need));
+      body.append(p);
+    }
+    if (r.note) {
+      const p = el('p', 'card-note');
+      p.append(el('b', null, '補足'), document.createTextNode(r.note));
+      body.append(p);
+    }
+    card.append(strip, body);
+    return { card, body };
+  }
+
+  const msgTimers = new WeakMap();
+  function say(node, text, tone, ms) {
+    if (!node) return;
+    clearTimeout(msgTimers.get(node));
+    node.textContent = text || '';
+    node.dataset.tone = tone || '';
+    node.hidden = !text;
+    if (text) msgTimers.set(node, setTimeout(() => { node.textContent = ''; node.hidden = true; }, ms || 6000));
+  }
+  let toolTimer = 0;
+  function toolMsg(text) {
+    const n = $('tool-msg');
+    clearTimeout(toolTimer);
+    n.textContent = text || '';
+    if (text) toolTimer = setTimeout(() => { n.textContent = ''; }, 6000);
+  }
+  function setNotice(text) {
+    const n = $('hand-notice');
+    n.textContent = text || '';
+    n.hidden = !text;
+  }
+
+  // ---------- いまのルール ----------
+  function deal(slot, card, delay) {
+    const back = el('div', 'card-back');
+    back.setAttribute('aria-hidden', 'true');
+    back.append(el('span', 'card-back-mark', '?'));
+    slot.append(back);
+    slot.style.setProperty('--delay', delay + 'ms');
+    slot.classList.add('is-dealing');
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      slot.classList.remove('is-dealing');
+      back.remove();
+    };
+    card.addEventListener('animationend', finish, { once: true });
+    setTimeout(finish, delay + 1300);
+  }
+  // opts.deal: 'all'（全部めくる）か、めくるカードの番号。opts.focus: { idx, act }
+  function renderHand(opts) {
+    opts = opts || {};
+    const box = $('hand');
+    const rules = handRules();
+    box.textContent = '';
+    box.dataset.n = String(rules.length);
+    $('hand-count').textContent = rules.length ? rules.length + '枚' : '';
+    $('hand-empty').hidden = rules.length > 0;
+    $('copy-text').disabled = rules.length === 0;
+    $('copy-fallback-box').hidden = true;
+    const animate = opts.deal != null && !reduced();
+    const base = opts.baseDelay || 0;
+    rules.forEach((r, i) => {
+      const slot = el('div', 'slot');
+      const { card, body } = buildCard(r, false);
+      const actions = el('div', 'card-actions');
+      const rb = button('btn btn-line', '引き直す', 'hand-reroll-' + (i + 1));
+      rb.dataset.act = 'reroll';
+      rb.dataset.idx = String(i);
+      const xb = button('btn btn-quiet', '外す', 'hand-remove-' + (i + 1));
+      xb.dataset.act = 'remove';
+      xb.dataset.idx = String(i);
+      actions.append(rb, xb);
+      const msg = el('p', 'card-msg');
+      msg.id = 'hand-msg-' + (i + 1);
+      msg.setAttribute('role', 'status');
+      msg.hidden = true;
+      body.append(actions, msg);
+      slot.append(card);
+      if (animate && (opts.deal === 'all' || opts.deal === i)) deal(slot, card, base + (opts.deal === 'all' ? i * 160 : 0));
+      box.append(slot);
+    });
+    if (opts.focus) {
+      const target = rules.length ? $('hand-' + opts.focus.act + '-' + (Math.min(opts.focus.idx, rules.length - 1) + 1)) : $('spin');
+      if (target) { try { target.focus({ preventScroll: true }); } catch (e) { target.focus(); } }
+    }
+  }
+  function afterHandChange() {
+    syncHistory();
+    save();
+    renderHistory();
+    refreshListMarks();
+  }
+  function needScrollTo(node) {
+    const top = node.getBoundingClientRect().top;
+    const bar = $('tabbar').getBoundingClientRect().bottom;
+    return top < bar || top > window.innerHeight * 0.45;
+  }
+  function scrollToNode(node, block) {
+    try { node.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: block || 'start' }); } catch (e) { node.scrollIntoView(); }
+  }
+
+  function reroll(idx) {
+    const keep = handRules().filter((_, i) => i !== idx);
+    const cands = pool().filter((r) => !hand.ids.includes(r.id));
+    const { picked } = drawSet(cands, 1, recentSet(), keep);
+    if (!picked.length) {
+      say($('hand-msg-' + (idx + 1)), cands.length ? 'ほかのカードといっしょに使えるルールが、もう残ってないよ' : 'いまの条件で入れかえられるルールが、もう残ってないよ', 'warn');
+      return;
+    }
+    const r = picked[0];
+    hand.ids[idx] = r.id;
+    if (!hand.seen.includes(r.id)) hand.seen.push(r.id);
+    setNotice('');
+    renderHand({ deal: idx, focus: { idx, act: 'reroll' } });
+    afterHandChange();
+  }
+  function removeAt(idx) {
+    hand.ids.splice(idx, 1);
+    setNotice('');
+    renderHand({ focus: { idx, act: 'remove' } });
+    afterHandChange();
+  }
+  function addOne() {
+    const keep = handRules();
+    const cands = pool().filter((r) => !hand.ids.includes(r.id));
+    const { picked } = drawSet(cands, 1, recentSet(), keep);
+    if (!picked.length) {
+      toolMsg(cands.length ? 'いまのルールといっしょに使えるルールが、もう残ってないよ' : 'いまの条件で足せるルールが、もう残ってないよ');
+      return;
+    }
+    const r = picked[0];
+    hand.ids.push(r.id);
+    if (!hand.seen.includes(r.id)) hand.seen.push(r.id);
+    setNotice('');
+    const idx = hand.ids.length - 1;
+    renderHand({ deal: idx, baseDelay: 220 });
+    afterHandChange();
+    const slot = $('hand').children[idx];
+    if (slot) scrollToNode(slot, 'nearest');
+    toolMsg((idx + 1) + '枚目を足したよ');
+  }
+
+  $('hand').addEventListener('click', (ev) => {
+    const b = ev.target.closest('button[data-act]');
+    if (!b) return;
+    const i = Number(b.dataset.idx);
+    if (b.dataset.act === 'reroll') reroll(i);
+    else removeAt(i);
+  });
+  $('add-one').addEventListener('click', addOne);
+  $('spin').addEventListener('click', () => {
+    const res = spin();
+    if (!res.ok) { setNotice(res.msg); return; }
+    setNotice(res.msg);
+    const head = $('hand-head');
+    const scroll = needScrollTo(head);
+    renderHand({ deal: 'all', baseDelay: scroll ? 260 : 0 });
+    save();
+    renderHistory();
+    refreshListMarks();
+    if (scroll) scrollToNode(head, 'start');
+  });
+
+  // ---------- テキストでコピー ----------
+  function handText() {
+    const rules = handRules();
+    if (!rules.length) return '';
+    const out = ['【' + D.copyTitle + '】'];
+    rules.forEach((r, i) => {
+      out.push('');
+      out.push(circled(i + 1) + ' ' + noStr(r.id) + ' ' + r.title + '（' + lvLabel(r.lv) + '）');
+      if (r.text) out.push(r.text);
+      r.list.forEach((s) => out.push('・' + s));
+      if (r.need) out.push('用意するもの：' + r.need);
+      if (r.p) out.push('※' + r.p + '人専用');
+    });
+    return out.join('\n');
+  }
+  function copyFallback(text) {
+    const box = $('copy-fallback-box');
+    const ta = $('copy-fallback');
+    ta.value = text;
+    ta.rows = Math.min(16, Math.max(6, text.split('\n').length + 1));
+    box.hidden = false;
+    toolMsg('');
+    try { ta.focus({ preventScroll: true }); } catch (e) { ta.focus(); }
+    ta.select();
+    try { ta.setSelectionRange(0, text.length); } catch (e) { /* 古い端末 */ }
+  }
+  $('copy-text').addEventListener('click', () => {
+    const text = handText();
+    if (!text) return;
+    $('copy-fallback-box').hidden = true;
+    let p = null;
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') p = navigator.clipboard.writeText(text);
+    } catch (e) { p = null; }
+    if (!p || typeof p.then !== 'function') { copyFallback(text); return; }
+    p.then(() => toolMsg('コピーしたよ。LINE に貼りつけてね'), () => copyFallback(text));
+  });
+  $('copy-fallback-close').addEventListener('click', () => {
+    $('copy-fallback-box').hidden = true;
+    $('copy-text').focus();
+  });
+
+  // ---------- 画面をつけたままにする ----------
+  const wakeBox = $('wake-toggle');
+  let wakeLock = null;
+  let wakeWanted = false;
+  function wakeFail() {
+    wakeWanted = false;
+    wakeBox.checked = false;
+    toolMsg('この端末では使えないみたい');
+  }
+  function askWake() {
+    try {
+      return navigator.wakeLock.request('screen').then((s) => {
+        wakeLock = s;
+        s.addEventListener('release', () => { if (wakeLock === s) wakeLock = null; });
+        return true;
+      }, () => false);
+    } catch (e) { return Promise.resolve(false); }
+  }
+  function releaseWake() {
+    const s = wakeLock;
+    wakeLock = null;
+    if (s) { try { s.release().catch(() => {}); } catch (e) { /* もう外れている */ } }
+  }
+  wakeBox.addEventListener('change', () => {
+    if (!wakeBox.checked) {
+      wakeWanted = false;
+      releaseWake();
+      toolMsg('');
+      return;
+    }
+    if (!navigator.wakeLock || typeof navigator.wakeLock.request !== 'function') { wakeFail(); return; }
+    wakeWanted = true;
+    askWake().then((ok) => {
+      if (!ok) { wakeFail(); return; }
+      if (!wakeWanted) { releaseWake(); return; }
+      toolMsg('画面が消えないようにしたよ');
+    });
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && wakeWanted && !wakeLock) {
+      askWake().then((ok) => { if (!ok) wakeFail(); else if (!wakeWanted) releaseWake(); });
+    }
+  });
+
+  // ---------- 条件 ----------
+  let hintTimer = 0;
+  function hint(text) {
+    const h = $('set-hint');
+    clearTimeout(hintTimer);
+    h.textContent = text || '';
+    if (text) hintTimer = setTimeout(() => { h.textContent = ''; }, 4000);
+  }
+  function toggleLv(lv) {
+    const on = settings.lv.includes(lv);
+    if (on && settings.lv.length === 1) { hint('難易度は1つ以上オンにしておこう'); return; }
+    settings.lv = on ? settings.lv.filter((v) => v !== lv) : settings.lv.concat(lv).sort((a, b) => a - b);
+    hint('');
+    save();
+    renderSettings();
+  }
+  function toggleCat(key) {
+    const off = settings.catOff.includes(key);
+    if (!off && settings.catOff.length >= D.cats.length - 1) { hint('ジャンルは1つ以上オンにしておこう'); return; }
+    settings.catOff = off ? settings.catOff.filter((k) => k !== key) : settings.catOff.concat(key);
+    hint('');
+    save();
+    renderSettings();
+  }
+  function lvTile(lv) {
+    const tile = el('span', 'lv-tile');
+    tile.setAttribute('aria-hidden', 'true');
+    const t = el('span', 'lv-tile-txt');
+    t.append(el('i', null, '★'), String(lv));
+    tile.append(t);
+    return tile;
+  }
+  function buildSettings() {
+    const row = $('lv-row');
+    for (let lv = 1; lv <= 5; lv++) {
+      const b = button('lv-toggle', null, 'lv-toggle-' + lv);
+      b.dataset.lv = String(lv);
+      b.append(lvTile(lv), el('span', 'sr-only', '★' + lv), el('span', 'lv-name', lvName(lv)), el('span', 'lv-count'));
+      b.addEventListener('click', () => toggleLv(lv));
+      row.append(b);
+    }
+    const cr = $('cat-row');
+    D.cats.forEach((c) => {
+      const b = button('chip', null, 'cat-' + safeKey(c.key));
+      b.append(el('span', null, c.name), el('span', 'chip-n'));
+      b.addEventListener('click', () => toggleCat(c.key));
+      cr.append(b);
+    });
+    const radio = (name, n, unit, onChange) => {
+      const input = el('input');
+      input.type = 'radio';
+      input.name = name;
+      input.id = name + '-' + n;
+      input.value = String(n);
+      input.addEventListener('change', onChange);
+      const label = el('label');
+      label.htmlFor = input.id;
+      label.append(String(n), el('small', null, unit));
+      return [input, label];
+    };
+    COUNTS.forEach((n) => $('count-seg').append(...radio('count', n, '枚', () => { settings.n = n; save(); renderSettings(); })));
+    if (PLAYERS.length > 1) {
+      PLAYERS.forEach((n) => $('players-seg').append(...radio('players', n, '人', () => { settings.players = n; save(); renderSettings(); })));
+    } else {
+      $('players-field').hidden = true;
+      $('step-players').hidden = true;
+    }
+    // 枚数と人数を1行に並べる（幅は選択肢の数の比。多すぎるときは縦に積む）
+    const many = COUNTS.length + PLAYERS.length > 8;
+    $('seg-row').style.gridTemplateColumns = PLAYERS.length > 1 && !many
+      ? 'minmax(0, ' + COUNTS.length + 'fr) minmax(0, ' + PLAYERS.length + 'fr)'
+      : 'minmax(0, 1fr)';
+    $('cat-all').addEventListener('click', () => { settings.catOff = []; hint(''); save(); renderSettings(); });
+  }
+  function renderSettings() {
+    for (let lv = 1; lv <= 5; lv++) {
+      const b = $('lv-toggle-' + lv);
+      b.setAttribute('aria-pressed', String(settings.lv.includes(lv)));
+      const n = D.rules.filter((r) => r.lv === lv && !settings.catOff.includes(r.cat) && fitsPlayers(r)).length;
+      b.querySelector('.lv-count').textContent = n + '件';
+    }
+    $('count-' + settings.n).checked = true;
+    const pr = $('players-' + settings.players);
+    if (pr) pr.checked = true;
+    D.cats.forEach((c) => {
+      const b = $('cat-' + safeKey(c.key));
+      b.setAttribute('aria-pressed', String(!settings.catOff.includes(c.key)));
+      b.querySelector('.chip-n').textContent = String(D.rules.filter((r) => r.cat === c.key && settings.lv.includes(r.lv) && fitsPlayers(r)).length);
+    });
+    const onCats = D.cats.length - settings.catOff.length;
+    $('cat-summary').textContent = settings.catOff.length ? onCats + ' / ' + D.cats.length + ' がオン' : 'ぜんぶオン（' + D.cats.length + '）';
+    $('cat-all').hidden = settings.catOff.length === 0;
+    const k = pool().length;
+    $('spin').disabled = k === 0;
+    $('add-one').disabled = k === 0;
+    const line = $('pool-line');
+    line.textContent = '';
+    if (!k) line.append('いまの条件だと、引けるルールがないよ');
+    else if (k < settings.n) line.append('いまの条件だと', el('b', null, String(k)), '件だけ。' + k + '枚まで引けるよ');
+    else line.append('いまの条件で', el('b', null, String(k)), '件から' + settings.n + '枚引くよ');
+  }
+
+  // ---------- 履歴 ----------
+  let clearArmed = 0;
+  function disarmClear() {
+    clearTimeout(clearArmed);
+    clearArmed = 0;
+    const b = $('hist-clear');
+    b.textContent = '履歴を消す';
+    b.classList.remove('is-armed');
+  }
+  function renderHistory() {
+    const list = $('hist-list');
+    list.textContent = '';
+    $('hist-count').textContent = hist.length ? hist.length + '回' : 'まだなし';
+    $('hist-empty').hidden = hist.length > 0;
+    $('hist-clear').hidden = hist.length === 0;
+    hist.forEach((e) => {
+      const li = el('li', 'hist-item');
+      const time = el('time', 'hist-time', fmtTime(e.t));
+      time.dateTime = new Date(e.t).toISOString();
+      li.append(time);
+      if (hand.hid === e.id && sameIds(hand.ids, e.ids)) {
+        li.append(el('span', 'hist-now', 'いまのルール'));
+      } else {
+        const b = button('btn btn-sea-line btn-sm hist-back', 'この組み合わせに戻す', 'hist-back-' + e.id);
+        b.dataset.hid = e.id;
+        li.append(b);
+      }
+      const rules = el('ul', 'hist-rules');
+      e.ids.forEach((id) => {
+        const r = D.byId.get(id);
+        if (!r) return;
+        const item = el('li');
+        item.dataset.lv = String(r.lv);
+        item.append(el('span', 'hist-no', noStr(r.id)), el('span', null, r.title));
+        rules.append(item);
+      });
+      li.append(rules);
+      list.append(li);
+    });
+  }
+  function restore(hid) {
+    const i = hist.findIndex((h) => h.id === hid);
+    if (i < 0) return;
+    const e = hist.splice(i, 1)[0];
+    e.t = Date.now();
+    hist.unshift(e);
+    hand = { ids: e.ids.slice(), hid: e.id, seen: e.seen.slice() };
+    renderHand({ focus: { idx: 0, act: 'reroll' } });
+    save();
+    renderHistory();
+    refreshListMarks();
+    setNotice('この組み合わせに戻したよ');
+    const head = $('hand-head');
+    if (needScrollTo(head)) scrollToNode(head, 'start');
+  }
+  $('hist-list').addEventListener('click', (ev) => {
+    const b = ev.target.closest('button[data-hid]');
+    if (b) restore(b.dataset.hid);
+  });
+  $('hist-clear').addEventListener('click', () => {
+    const b = $('hist-clear');
+    if (!clearArmed) {
+      b.textContent = 'もう一度押すと消えるよ';
+      b.classList.add('is-armed');
+      clearArmed = setTimeout(disarmClear, 4000);
+      return;
+    }
+    disarmClear();
+    hist = [];
+    hand.hid = null;
+    save();
+    renderHistory();
+    say($('hist-msg'), '履歴を消したよ', '', 4000);
+  });
+
+  // ---------- ぜんぶ見る ----------
+  const listItems = new Map();   // id → { r, card, btn, msg }
+  const listF = { lv: new Set(), cat: new Set(), q: '' };   // 空＝しぼらない
+  let listCols = 0;
+  function filterChip(id, label, lv, onClick) {
+    const b = button('chip', null, id);
+    if (lv) {
+      b.dataset.lv = String(lv);
+      const dot = el('span', 'chip-dot');
+      dot.setAttribute('aria-hidden', 'true');
+      b.append(dot);
+    }
+    b.append(el('span', null, label));
+    b.addEventListener('click', onClick);
+    return b;
+  }
+  const toggleSet = (set, v) => { if (set.has(v)) set.delete(v); else set.add(v); };
+  function buildList() {
+    D.rules.forEach((r) => {
+      const { card, body } = buildCard(r, true);
+      const actions = el('div', 'card-actions');
+      const b = button('btn btn-line', 'いまのルールに入れる', 'add-' + r.id);
+      b.dataset.id = String(r.id);
+      actions.append(b);
+      const msg = el('p', 'card-msg');
+      msg.setAttribute('role', 'status');
+      msg.hidden = true;
+      body.append(actions, msg);
+      listItems.set(r.id, { r, card, btn: b, msg });
+    });
+    $('list-grid').addEventListener('click', (ev) => {
+      const b = ev.target.closest('button[data-id]');
+      if (!b) return;
+      const it = listItems.get(Number(b.dataset.id));
+      if (it) addFromList(it);
+    });
+    const lvBox = $('list-lv');
+    lvBox.append(filterChip('list-lv-all', 'ぜんぶ', 0, () => { listF.lv.clear(); updateList(); }));
+    for (let lv = 1; lv <= 5; lv++) lvBox.append(filterChip('list-lv-' + lv, lvLabel(lv), lv, () => { toggleSet(listF.lv, lv); updateList(); }));
+    const catBox = $('list-cat');
+    catBox.append(filterChip('list-cat-all', 'ぜんぶ', 0, () => { listF.cat.clear(); updateList(); }));
+    D.cats.forEach((c) => catBox.append(filterChip('list-cat-' + safeKey(c.key), c.name, 0, () => { toggleSet(listF.cat, c.key); updateList(); })));
+    $('list-search').addEventListener('input', () => { listF.q = $('list-search').value; layoutList(); });
+    $('list-reset').addEventListener('click', () => {
+      listF.lv.clear();
+      listF.cat.clear();
+      listF.q = '';
+      $('list-search').value = '';
+      updateList();
+    });
+  }
+  function updateList() {
+    renderListFilters();
+    layoutList();
+  }
+  function renderListFilters() {
+    $('list-lv-all').setAttribute('aria-pressed', String(listF.lv.size === 0));
+    for (let lv = 1; lv <= 5; lv++) $('list-lv-' + lv).setAttribute('aria-pressed', String(listF.lv.has(lv)));
+    $('list-cat-all').setAttribute('aria-pressed', String(listF.cat.size === 0));
+    D.cats.forEach((c) => $('list-cat-' + safeKey(c.key)).setAttribute('aria-pressed', String(listF.cat.has(c.key))));
+    $('list-cat-summary').textContent = listF.cat.size ? listF.cat.size + 'つにしぼり中' : 'しぼらない';
+  }
+  const colsFor = (w) => Math.max(1, Math.min(4, Math.floor((w + LIST_GAP) / (LIST_MIN_W + LIST_GAP))));
+  function layoutList() {
+    if ($('panel-list').hidden) return;
+    const terms = fold(listF.q).split(/\s+/).filter(Boolean);
+    const vis = [];
+    listItems.forEach((it) => {
+      const r = it.r;
+      if (listF.lv.size && !listF.lv.has(r.lv)) return;
+      if (listF.cat.size && !listF.cat.has(r.cat)) return;
+      if (terms.length && !terms.every((t) => r.hay.includes(t))) return;
+      vis.push(it);
+    });
+    const grid = $('list-grid');
+    const n = colsFor(grid.clientWidth);
+    grid.textContent = '';
+    const cols = [];
+    for (let i = 0; i < n; i++) {
+      const c = el('div', 'list-col');
+      grid.append(c);
+      cols.push(c);
+    }
+    vis.forEach((it, i) => cols[i % n].append(it.card));   // 左上から No. 順に横へ並べる
+    listCols = n;
+    const cnt = $('list-count');
+    cnt.textContent = '';
+    cnt.append(el('b', null, String(vis.length)), '件');
+    if (vis.length !== D.rules.length) cnt.append(' / 全' + D.rules.length + '件');
+    $('list-empty').hidden = vis.length > 0;
+    $('list-reset').hidden = !(listF.q.trim() || listF.lv.size || listF.cat.size);
+  }
+  function relayoutIfNeeded() {
+    if (!$('panel-list').hidden && colsFor($('list-grid').clientWidth) !== listCols) layoutList();
+  }
+  if ('ResizeObserver' in window) new ResizeObserver(relayoutIfNeeded).observe($('list-grid'));
+  else window.addEventListener('resize', relayoutIfNeeded);
+
+  function refreshListMarks() {
+    listItems.forEach((it) => {
+      const inHand = hand.ids.includes(it.r.id);
+      it.btn.textContent = inHand ? 'いまのルールに入ってる' : 'いまのルールに入れる';
+      it.btn.classList.toggle('is-in', inHand);
+    });
+  }
+  function addFromList(it) {
+    const r = it.r;
+    if (hand.ids.includes(r.id)) { say(it.msg, 'もう いまのルールに入ってるよ', 'info'); return; }
+    const bad = handRules().filter((h) => clash(h, r));
+    if (bad.length) {
+      say(it.msg, bad.map((b) => noStr(b.id) + '「' + b.title + '」').join('、') + 'といっしょには使えないよ', 'warn');
+      return;
+    }
+    hand.ids.push(r.id);
+    if (!hand.seen.includes(r.id)) hand.seen.push(r.id);
+    setNotice('');
+    renderHand();
+    afterHandChange();
+    let t = 'いまのルールに入れたよ（' + hand.ids.length + '枚目）';
+    if (r.p && settings.players && r.p !== settings.players) t += '。' + r.p + '人専用のルールだよ（ガチャの人数は' + settings.players + '人）';
+    say(it.msg, t, 'ok');
+  }
+
+  // ---------- 遊び方 ----------
+  // 早見表のことばに、色の六角形を付ける（meta.colorWords: ことば → 色。色は COLOR_KEYS のどれか）
+  const escRe = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const COLOR_RE = D.colorWords.length ? new RegExp(D.colorWords.map((w) => escRe(w[0])).join('|'), 'g') : null;
+  const COLOR_OF = new Map(D.colorWords);
+  function resText(text) {
+    const frag = document.createDocumentFragment();
+    if (!COLOR_RE) { frag.append(text); return frag; }
+    let last = 0;
+    let m;
+    COLOR_RE.lastIndex = 0;
+    while ((m = COLOR_RE.exec(text))) {
+      if (m.index > last) frag.append(text.slice(last, m.index));
+      frag.append(el('span', 'res res-' + COLOR_OF.get(m[0]), m[0]));
+      last = m.index + m[0].length;
+    }
+    if (last < text.length) frag.append(text.slice(last));
+    return frag;
+  }
+  function buildHowto() {
+    const lvBox = $('howto-levels');
+    for (let lv = 1; lv <= 5; lv++) {
+      const li = el('li');
+      li.dataset.lv = String(lv);
+      const box = el('div');
+      const name = el('p', 'lv-desc-name');
+      name.append(el('span', null, lvLabel(lv)), el('span', 'lv-desc-count', D.rules.filter((r) => r.lv === lv).length + '件'));
+      box.append(name);
+      if (D.levels[lv].desc) box.append(el('p', 'lv-desc-text', D.levels[lv].desc));
+      li.append(lvTile(lv), box);
+      lvBox.append(li);
+    }
+    const combos = D.combos.map((c) => ({ name: str(c.name), pick: str(c.pick), desc: str(c.desc) })).filter((c) => c.name || c.pick || c.desc);
+    combos.forEach((c) => {
+      const d = el('div', 'combo');
+      if (c.name) d.append(el('h4', 'combo-name', c.name));
+      if (c.pick) d.append(el('p', 'combo-pick', c.pick));
+      if (c.desc) d.append(el('p', 'combo-desc', c.desc));
+      $('howto-combos').append(d);
+    });
+    $('howto-combos-sec').hidden = combos.length === 0;
+    let tables = 0;
+    D.basics.forEach((b) => {
+      const rows = Array.isArray(b.rows) ? b.rows.filter((row) => Array.isArray(row) && row.length) : [];
+      if (!rows.length) return;
+      tables++;
+      const wrap = el('div', 'table-wrap');
+      const table = el('table', 'quick');
+      if (str(b.title)) table.append(el('caption', null, str(b.title)));
+      const tb = el('tbody');
+      rows.forEach((row) => {
+        const tr = el('tr');
+        const th = el('th');
+        th.scope = 'row';
+        th.append(resText(str(row[0])));
+        const td = el('td');
+        td.append(resText(row.slice(1).map(str).filter(Boolean).join(' / ')));
+        tr.append(th, td);
+        tb.append(tr);
+      });
+      table.append(tb);
+      wrap.append(table);
+      $('howto-basics').append(wrap);
+    });
+    $('howto-basics-sec').hidden = tables === 0;
+    $('howto-disclaimer').textContent = D.disclaimer;
+    $('howto-disclaimer').hidden = !D.disclaimer;
+    const up = str(D.meta.updated);
+    $('howto-updated').textContent = 'ルール ' + D.rules.length + '件' + (up ? ' ・ 更新 ' + up : '');
+  }
+
+  // ---------- タブ ----------
+  function showTab(name, opts) {
+    opts = opts || {};
+    if (!TABS.includes(name)) name = 'gacha';
+    const changed = name !== tab;
+    tab = name;
+    TABS.forEach((t) => {
+      const on = t === name;
+      const b = $('tab-' + t);
+      b.setAttribute('aria-selected', String(on));
+      b.tabIndex = on ? 0 : -1;
+      $('panel-' + t).hidden = !on;
+    });
+    if (name === 'list') layoutList();
+    if (!opts.keepHash) { try { window.history.replaceState(null, '', '#' + name); } catch (e) { /* 書けなくてもいい */ } }
+    if (changed && !opts.keepScroll) {
+      const y = $('masthead').getBoundingClientRect().bottom + window.scrollY;
+      if (window.scrollY > y) window.scrollTo(0, y);
+    }
+    save();
+  }
+  TABS.forEach((t) => $('tab-' + t).addEventListener('click', () => showTab(t)));
+  $('tabs').addEventListener('keydown', (ev) => {
+    const i = TABS.indexOf(tab);
+    let j = -1;
+    if (ev.key === 'ArrowRight') j = (i + 1) % TABS.length;
+    else if (ev.key === 'ArrowLeft') j = (i + TABS.length - 1) % TABS.length;
+    else if (ev.key === 'Home') j = 0;
+    else if (ev.key === 'End') j = TABS.length - 1;
+    if (j < 0) return;
+    ev.preventDefault();
+    showTab(TABS[j]);
+    $('tab-' + TABS[j]).focus();
+  });
+  window.addEventListener('hashchange', () => {
+    const h = location.hash.slice(1);
+    if (TABS.includes(h)) showTab(h, { keepHash: true });
+  });
+  document.addEventListener('click', (ev) => {
+    const a = ev.target.closest && ev.target.closest('a[href^="#"]');
+    if (!a) return;
+    const h = a.getAttribute('href').slice(1);
+    if (!TABS.includes(h)) return;
+    ev.preventDefault();
+    showTab(h);
+  });
+
+  // ---------- はじめる ----------
+  document.title = D.title;
+  $('app-title').textContent = D.title;
+  const sub = $('app-sub');
+  sub.textContent = '';
+  sub.append((D.subtitle || 'ハウスルール') + ' ', el('b', null, String(D.rules.length)), '件');
+  $('list-search').placeholder = D.searchExamples.length ? 'ことばで探す（例: ' + D.searchExamples.join('、') + '）' : 'ことばで探す';
+  $('tab-list-count').textContent = String(D.rules.length);
+  $('tab-list').setAttribute('aria-label', 'ぜんぶ見る（' + D.rules.length + '件）');
+  buildSettings();
+  buildList();
+  buildHowto();
+  if (firstRun) {
+    spin();   // 初めては ★1〜★2 から2枚（初期の条件のまま）
+    setNotice('例として' + hand.ids.length + '枚引いてあるよ。条件を選んで「ガチャを回す」を押してみよう');
+    save();
+  }
+  renderSettings();
+  renderHand();
+  renderHistory();
+  renderListFilters();
+  refreshListMarks();
+  const fromHash = location.hash.slice(1);
+  showTab(TABS.includes(fromHash) ? fromHash : tab, { keepHash: true, keepScroll: true });
+})();
+</script>

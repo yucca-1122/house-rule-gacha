@@ -1,0 +1,26 @@
+# tools/build.mjs が作る1枚もの（git に入れない）
+dist/
+
+# node
+node_modules/
+npm-debug.log*
+*.log
+
+# OS が勝手に作るもの
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# エディタ
+.vscode/
+.idea/
+*.swp
+
+# テストの撮影物・一時ファイル・ブラウザのプロフィール
+shots/
+screenshots/
+test-results/
+*.tmp
+.tmp/
+.cache/
+profile*/
