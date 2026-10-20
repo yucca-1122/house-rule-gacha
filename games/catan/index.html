@@ -290,6 +290,8 @@ a { color: inherit; }
   white-space: nowrap;
 }
 .tab:hover { color: var(--on-sea); }
+/* 横向きのスマホなど高さの低い画面: タブの列の上下を詰める（使用中のカードを1画面に収めるため） */
+@media (max-height: 500px) { .tabbar { padding-block: 4px; margin-block: 6px; } }
 .tab[aria-selected="true"] { background: var(--pick); color: var(--on-pick); }
 .tab-count {
   font-size: 11.5px;
@@ -305,19 +307,20 @@ a { color: inherit; }
 /* タブが4つ（持ち時間あり）のスマホ: 高さは変えず、横の余白だけ詰める */
 @media (max-width: 719px) { .tabs--4 .tab { padding-inline: 8px; } }
 @media (max-width: 379px) { .tabs--4 .tab { padding-inline: 5px; } }
-/* タブが5つ（チーム戦あり）のスマホ: 「ぜんぶ見る」を「一覧」にして件数を隠す。入りきらない幅では、タブの列だけが横に動く */
+/* タブが5〜6つのスマホ: 短い名前（チーム・時間・一覧）にして件数を隠す。入りきらない幅では、タブの列だけが横に動く */
 .tab-short { display: none; }
 @media (max-width: 719px) {
-  .tabs--5 { overflow-x: auto; scrollbar-width: none; }
-  .tabs--5::-webkit-scrollbar { display: none; }
-  .tabs--5 .tab { flex: 1 0 auto; padding-inline: 7px; }
-  .tabs--5 .tab:focus-visible { outline-offset: -3px; }
-  .five-tabs .tab-long, .five-tabs .tab-count { display: none; }
-  .five-tabs .tab-short { display: inline; }
+  .tabs--5, .tabs--6 { overflow-x: auto; scrollbar-width: none; }
+  .tabs--5::-webkit-scrollbar, .tabs--6::-webkit-scrollbar { display: none; }
+  .tabs--5 .tab, .tabs--6 .tab { flex: 1 0 auto; padding-inline: 7px; }
+  .tabs--5 .tab:focus-visible, .tabs--6 .tab:focus-visible { outline-offset: -3px; }
+  .many-tabs .tab-long, .many-tabs .tab-count { display: none; }
+  .many-tabs .tab-short { display: inline; }
 }
-@media (max-width: 379px) { .tabs--5 .tab { padding-inline: 3px; } }
+@media (max-width: 379px) { .tabs--5 .tab, .tabs--6 .tab { padding-inline: 3px; } }
+@media (max-width: 359px) { .tabs--6 .tab { font-size: 13.5px; } }   /* 320px でも6つが1行に入る */
 /* 件数のバッジ（11.5px＋上下3px）を隠しても、タブの高さは前と同じ 37.5px のまま（タブの下が動かないように） */
-@media (min-width: 360px) and (max-width: 719px) { .tabs--5 .tab { min-height: 37.5px; } }
+@media (min-width: 360px) and (max-width: 719px) { .tabs--5 .tab, .tabs--6 .tab { min-height: 37.5px; } }
 @media (min-width: 720px) {
   .tabs { display: inline-flex; }
   .tab { flex: 0 0 auto; padding-inline: 20px; }
@@ -354,7 +357,12 @@ a { color: inherit; }
 .btn-line:hover:not(:disabled) { background: var(--paper-2); }
 .btn-quiet { color: var(--ink-dim); padding-inline: 10px; }
 .btn-quiet:hover:not(:disabled) { color: var(--ink); background: var(--paper-2); }
-.btn.is-in { border-style: dashed; border-color: var(--line); color: var(--ink-dim); }
+.btn-use { border-color: var(--link); background: var(--link); color: var(--paper); }
+.btn-use:hover:not(:disabled) { filter: brightness(1.08); }
+.btn-use.is-on { border-color: var(--chip-sand); background: var(--chip-sand); color: var(--on-chip-sand); }
+.btn-use.is-on::before { content: "✓"; }
+.btn-wheat { border-color: var(--wheat); background: var(--wheat); color: var(--on-wheat); box-shadow: 0 3px 0 var(--wheat-edge); }
+.btn-wheat:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 var(--wheat-edge); }
 .btn.is-armed, .btn.is-armed:hover:not(:disabled) { border-color: var(--focus); color: var(--focus); }
 
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -614,6 +622,8 @@ a { color: inherit; }
 .stars { font-size: 13px; letter-spacing: .04em; white-space: nowrap; }
 .stars-off { opacity: .3; }
 .card-lv { font-size: 13px; font-weight: 700; }
+.used-badge { display: none; align-items: center; padding: 1px 8px; border-radius: 999px; background: var(--paper); color: var(--ink); font-size: 11px; font-weight: 700; line-height: 1.5; white-space: nowrap; }
+.card.is-used .used-badge { display: inline-flex; }
 .card-no { margin-left: auto; font-family: var(--font-display); font-size: 14px; letter-spacing: .04em; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .card-body { flex: 1 1 auto; display: flex; flex-direction: column; gap: 9px; padding: 13px 16px 15px; }
 .card-tags { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -761,6 +771,48 @@ a { color: inherit; }
 .team-draw .seg { max-width: 260px; }
 .pool-note { display: block; font-size: 12px; }
 
+/* ---------- 使用中（使うカードだけを、机に置いて読める大きさで） ---------- */
+.used { display: grid; gap: 10px; align-content: start; }
+.used-grid {
+  --used-fs: 18px;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--used-col, 300px)), 1fr));
+  align-items: start;
+}
+.used-grid:empty { display: none; }
+.ucard {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 7px 10px 6px;
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 2px 0 var(--edge);
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.ucard::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px; background: linear-gradient(90deg, var(--lv, var(--wheat)), var(--lv-2, var(--wheat))); }
+.ucard-head { display: flex; align-items: flex-start; gap: 8px; font-size: 11.5px; line-height: 1.3; color: var(--ink-dim); }
+.ucard-meta { flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 7px; }
+.ucard-lv { font-weight: 700; color: var(--ink); white-space: nowrap; }
+.ucard-no { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ucard-title { font-size: 13px; font-weight: 700; color: var(--ink); }
+.ucard-stop { flex: none; appearance: none; border: 0; background: transparent; padding: 0 4px; border-radius: 6px; font: inherit; font-size: 11.5px; font-weight: 700; color: var(--link); cursor: pointer; }
+.ucard-stop:hover { background: var(--paper-2); }
+.ucard-text { margin: 0; font-size: var(--used-fs); line-height: 1.4; white-space: pre-line; }
+.ucard-list { margin: 0; padding: 0; list-style: none; display: grid; font-size: var(--used-fs); line-height: 1.4; }
+.ucard-list li { position: relative; padding-left: .85em; }
+.ucard-list li::before { content: ""; position: absolute; left: 0; top: .55em; width: .42em; height: .48em; clip-path: var(--hex); background: var(--ore); }
+.ucard-need { margin: 0; font-size: 11.5px; line-height: 1.3; color: var(--ink-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ucard-sec { margin: 0; font-family: var(--font-display); font-size: calc(var(--used-fs) * 2.2); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.ucard-sec small { font-size: .45em; margin-left: 2px; }
+.used-empty { display: grid; gap: 4px; padding: 18px 16px; border: 2px dashed var(--on-sea-line); border-radius: 14px; }
+.used-empty p { margin: 0; }
+.used-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-top: 4px; }
+
 /* ---------- 言葉の説明（点線と吹き出し）: 文字の大きさ・行の高さは変えない ---------- */
 .term {
   text-decoration-line: underline;
@@ -813,8 +865,15 @@ a { color: inherit; }
 .timer-base-lead { font-size: 13px; font-weight: 700; line-height: 1.4; color: var(--on-sea-dim); }
 .timer-base-main { font-family: var(--font-display); font-weight: 400; font-size: 30px; line-height: 1.15; letter-spacing: .02em; color: var(--on-sea); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .timer-howto { margin: -4px 0 0; font-size: 13.5px; line-height: 1.7; color: var(--on-sea-dim); }
-.timer-now { display: grid; grid-template-columns: minmax(0, 1fr); }
-@media (min-width: 640px) { .timer-now { grid-template-columns: minmax(0, 640px); } }
+.timer-now { display: grid; gap: 12px; min-width: 0; }
+.t-set .seg { max-width: 260px; }
+.roul { display: grid; gap: 8px; justify-items: start; padding: 14px 16px 16px; border-radius: 14px; background: var(--paper); color: var(--ink); box-shadow: 0 3px 0 var(--edge); }
+.roul-title { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 17px; line-height: 1.4; }
+.roul-howto { margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--ink-dim); }
+.roul-dial { display: flex; align-items: baseline; gap: 4px; min-width: 7.5em; padding: 6px 18px 8px; border-radius: 12px; background: var(--paper-2); font-family: var(--font-display); font-variant-numeric: tabular-nums; }
+.roul-num { min-width: 1.6em; text-align: right; font-size: 46px; line-height: 1.1; }
+.roul-unit { font-size: 20px; }
+.roul-btns { display: flex; flex-wrap: wrap; gap: 8px; }
 .timer-empty { display: grid; gap: 4px; padding: 18px 16px; border: 2px dashed var(--on-sea-line); border-radius: 14px; }
 .timer-empty p { margin: 0; }
 .timer-empty-main { font-family: var(--font-display); font-weight: 400; font-size: 22px; line-height: 1.3; color: var(--on-sea); font-variant-numeric: tabular-nums; }
@@ -936,15 +995,39 @@ a { color: inherit; }
 
     <div class="tabbar" id="tabbar">
       <div class="tabs" id="tabs" role="tablist" aria-label="画面のきりかえ">
+        <button type="button" class="tab" role="tab" id="tab-used" aria-controls="panel-used" aria-selected="false" tabindex="-1">使用中</button>
         <button type="button" class="tab" role="tab" id="tab-gacha" aria-controls="panel-gacha" aria-selected="true">ガチャ</button>
-        <button type="button" class="tab" role="tab" id="tab-team" aria-controls="panel-team" aria-selected="false" tabindex="-1" hidden>チーム戦</button>
-        <button type="button" class="tab" role="tab" id="tab-timer" aria-controls="panel-timer" aria-selected="false" tabindex="-1" hidden>持ち時間</button>
+        <button type="button" class="tab" role="tab" id="tab-team" aria-controls="panel-team" aria-selected="false" tabindex="-1" hidden><span class="tab-long" id="tab-team-long">チーム戦</span><span class="tab-short" id="tab-team-short">チーム</span></button>
+        <button type="button" class="tab" role="tab" id="tab-timer" aria-controls="panel-timer" aria-selected="false" tabindex="-1" hidden><span class="tab-long">持ち時間</span><span class="tab-short">時間</span></button>
         <button type="button" class="tab" role="tab" id="tab-list" aria-controls="panel-list" aria-selected="false" tabindex="-1"><span class="tab-long">ぜんぶ見る</span><span class="tab-short">一覧</span><span class="tab-count" id="tab-list-count"></span></button>
         <button type="button" class="tab" role="tab" id="tab-howto" aria-controls="panel-howto" aria-selected="false" tabindex="-1">遊び方</button>
       </div>
     </div>
 
     <main id="main">
+      <!-- 使用中（使うと決めたカードだけを、まとめて大きく） -->
+      <section class="panel used" id="panel-used" role="tabpanel" aria-labelledby="tab-used" hidden>
+        <h2 class="sr-only">使用中のカード</h2>
+        <div class="used-grid" id="used-grid"></div>
+        <div class="used-empty" id="used-empty" hidden>
+          <p><b>まだ使用中のカードはないよ。</b></p>
+          <p>引いたカードの「使用する」を押すと、ここに並ぶよ。</p>
+        </div>
+        <div class="used-tools">
+          <div class="hand-btns">
+            <button type="button" class="btn btn-paper" id="used-copy"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 8.5V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7.5a2 2 0 0 0 2 2h2.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>テキストでコピー</button>
+          </div>
+          <label class="switch" for="used-wake-toggle"><input type="checkbox" id="used-wake-toggle" role="switch"><span class="switch-track" aria-hidden="true"><span class="switch-knob"></span></span><span>画面をつけたままにする</span></label>
+        </div>
+        <p class="tool-msg" id="used-msg" role="status" aria-live="polite"></p>
+        <div class="copy-fallback" id="used-copy-fallback-box" hidden>
+          <p class="copy-fallback-lead">コピーできなかったので、下の文字を長押しでコピーしてね</p>
+          <label class="sr-only" for="used-copy-fallback">コピーする文章</label>
+          <textarea id="used-copy-fallback" rows="8" spellcheck="false"></textarea>
+          <button type="button" class="btn btn-sea-line btn-sm" id="used-copy-fallback-close">閉じる</button>
+        </div>
+      </section>
+
       <!-- ガチャ -->
       <section class="panel gacha" id="panel-gacha" role="tabpanel" aria-labelledby="tab-gacha">
         <div class="g-set">
@@ -977,7 +1060,7 @@ a { color: inherit; }
 
         <div class="g-hand">
           <div class="hand-head" id="hand-head">
-            <h2 class="hand-title">いまのルール</h2>
+            <h2 class="hand-title">引いたカード</h2>
             <span class="hand-count" id="hand-count"></span>
           </div>
           <div class="hand-tools">
@@ -997,8 +1080,8 @@ a { color: inherit; }
           <p class="notice" id="hand-notice" role="status" aria-live="polite" hidden></p>
           <div class="hand" id="hand"></div>
           <div class="hand-empty" id="hand-empty" hidden>
-            <p><b>いまのルールは空っぽだよ。</b></p>
-            <p>「ガチャを回す」か、<a href="#list"><span class="tab-long">ぜんぶ見る</span><span class="tab-short">一覧</span></a>から入れよう。</p>
+            <p><b>引いたカードは空っぽだよ。</b></p>
+            <p>「ガチャを回す」で引こう。好きなルールは<a href="#list"><span class="tab-long">ぜんぶ見る</span><span class="tab-short">一覧</span></a>から、そのまま使用できるよ。</p>
           </div>
         </div>
 
@@ -1049,7 +1132,7 @@ a { color: inherit; }
 
         <div class="m-cur" id="team-cur" hidden>
           <div class="hand-head" id="team-head">
-            <h2 class="hand-title">いまのチーム戦のカード</h2>
+            <h2 class="hand-title">引いたカード</h2>
             <span class="hand-count" id="team-hand-count"></span>
           </div>
           <div class="hand-tools">
@@ -1068,7 +1151,7 @@ a { color: inherit; }
           <div class="hand" id="team-hand"></div>
           <div class="hand-empty" id="team-empty" hidden>
             <p><b>基本の決まりだけで遊べるよ。</b></p>
-            <p>決まりを足したいときは「チーム戦のカードを引く」か、下の一覧から入れよう。</p>
+            <p>決まりを足したいときは「チーム戦のカードを引く」。下の一覧からも、そのまま使用できるよ。</p>
           </div>
         </div>
 
@@ -1095,13 +1178,29 @@ a { color: inherit; }
             <div class="lv-row" id="timer-lv-row" role="group" aria-labelledby="timer-lv-label"></div>
           </div>
           <p class="set-hint" id="timer-hint" role="status" aria-live="polite"></p>
+          <div class="field">
+            <p class="field-label" id="timer-count-label">枚数</p>
+            <div class="seg" id="timer-count-seg" role="radiogroup" aria-labelledby="timer-count-label"></div>
+          </div>
           <button type="button" class="spin" id="timer-spin"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7.8" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 13.5V9.4M9.6 2.6h4.8M12 2.6v3.1M18.3 6.9l1.5-1.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><span id="timer-spin-label">持ち時間ガチャを回す</span></button>
           <p class="pool-line" id="timer-pool-line" aria-live="polite"></p>
+          <div class="roul" id="roul" hidden>
+            <h3 class="roul-title" id="roul-title">秒数ルーレット</h3>
+            <p class="roul-howto" id="roul-howto" hidden></p>
+            <div class="roul-dial" aria-hidden="true"><span class="roul-num" id="roul-num">？</span><span class="roul-unit" id="roul-unit">秒</span></div>
+            <p class="sr-only" id="roul-status" role="status" aria-live="polite"></p>
+            <div class="roul-btns">
+              <button type="button" class="btn btn-wheat" id="roul-spin">ルーレットを回す</button>
+              <button type="button" class="btn btn-use" id="roul-use" aria-pressed="false" hidden>使用する</button>
+            </div>
+            <p class="card-msg" id="roul-msg" role="status" hidden></p>
+          </div>
         </div>
 
         <div class="t-cur">
           <div class="hand-head" id="timer-head">
-            <h2 class="hand-title">いまの持ち時間</h2>
+            <h2 class="hand-title">引いたカード</h2>
+            <span class="hand-count" id="timer-hand-count"></span>
           </div>
           <div class="hand-tools">
             <div class="hand-btns">
@@ -1116,7 +1215,13 @@ a { color: inherit; }
             <button type="button" class="btn btn-sea-line btn-sm" id="timer-copy-fallback-close">閉じる</button>
           </div>
           <p class="notice" id="timer-notice" role="status" aria-live="polite" hidden></p>
-          <div class="timer-now" id="timer-now"></div>
+          <div class="timer-now" id="timer-now">
+            <div class="hand" id="timer-hand"></div>
+            <div class="timer-empty" id="timer-empty">
+              <p><b>まだ引いていないよ。</b></p>
+              <p id="timer-empty-line"></p>
+            </div>
+          </div>
         </div>
 
         <div class="t-list">
@@ -1167,11 +1272,12 @@ a { color: inherit; }
               <h3 id="h-use">使い方</h3>
               <ol class="steps">
                 <li><span>難易度・枚数<span id="step-players">・人数</span>を選んで、<b>「ガチャを回す」</b>を押す。</span></li>
-                <li><span>気に入らないカードは<b>「引き直す」</b>、使わないカードは<b>「外す」</b>。好きなルールは「<span class="tab-long">ぜんぶ見る</span><span class="tab-short">一覧</span>」から入れられるよ。</span></li>
-                <li id="step-team" hidden><span>チーム戦にするなら、「<span id="step-team-name">チーム戦</span>」タブで<b>チームの形</b>を選ぶ。基本の決まりが出て、チーム戦のカードも引ける。</span></li>
-                <li id="step-timer" hidden><span>持ち時間も変えるなら、「持ち時間」タブで<b>「<span id="step-timer-name">持ち時間ガチャ</span>を回す」</b>。使うのは1枚だけ。</span></li>
-                <li><span>決まったら<b>「テキストでコピー」</b>で LINE に貼って、みんなで読もう。</span></li>
-                <li><span>遊んでいる間は<b>「画面をつけたままにする」</b>をオンにして机に置いておこう。途中でルールを増やすときは「1枚足す」。</span></li>
+                <li><span>気に入らないカードは<b>「引き直す」</b>、使わないカードは<b>「外す」</b>。</span></li>
+                <li><span>使うカードが決まったら<b>「使用する」</b>。「使用中」タブに、使うカードだけが大きく並ぶ（ルールは5枚まで・持ち時間は1つ）。好きなルールは「<span class="tab-long">ぜんぶ見る</span><span class="tab-short">一覧</span>」から、そのまま使用できるよ。</span></li>
+                <li id="step-team" hidden><span>チーム戦にするなら、「<span class="tab-long" id="step-team-name">チーム戦</span><span class="tab-short" id="step-team-short">チーム</span>」タブで<b>チームの形</b>を選ぶ。基本の決まりが出て、チーム戦のカードも引ける（使用できるのは3枚まで）。</span></li>
+                <li id="step-timer" hidden><span>持ち時間も変えるなら、「<span class="tab-long">持ち時間</span><span class="tab-short">時間</span>」タブで<b>「<span id="step-timer-name">持ち時間ガチャ</span>を回す」</b><span id="step-roul" hidden>か<b>「<span id="step-roul-name">秒数ルーレット</span>」</b></span>。使用できる持ち時間は1つだけで、新しく「使用する」と入れ替わる。</span></li>
+                <li><span>決まったら<b>「テキストでコピー」</b>で LINE に貼って、みんなで読もう。使用中のカードがあれば、それをコピーするよ。</span></li>
+                <li><span>遊んでいる間は「使用中」タブで<b>「画面をつけたままにする」</b>をオンにして、机に置いておこう。途中でルールを増やすときは「1枚足す」で引いて「使用する」。</span></li>
               </ol>
             </section>
             <section aria-labelledby="h-lv">
@@ -1217,7 +1323,9 @@ a { color: inherit; }
   const HISTORY_MAX = 20;      // 履歴に残す回数
   const RECENT_N = 3;          // 「直近◯回」に出たルールはなるべく避ける
   const OTHER = '__other';     // cats に無いジャンルのルールの置き場
-  const ALL_TABS = ['gacha', 'team', 'timer', 'list', 'howto'];   // チーム戦は team、持ち時間は timer があるゲームだけ
+  const ALL_TABS = ['used', 'gacha', 'team', 'timer', 'list', 'howto'];   // チーム戦は team、持ち時間は timer があるゲームだけ
+  const USE_MAX_RULES = 5;      // 使用できるルールの枚数
+  const USE_MAX_TEAM = 3;       // 使用できるチーム戦のカードの枚数
   const TEAM_HISTORY_MAX = 10;   // チーム戦のカードの、引いた記録を残す回数
   const TIMER_HISTORY_MAX = 10;   // 持ち時間の履歴に残す枚数
   const LIST_MIN_W = 290;      // ぜんぶ見るの1列の最小幅
@@ -1393,7 +1501,21 @@ a { color: inherit; }
     const base = str(t.base);
     const m = base.match(/^(.*\S)[\s\u3000]+(\S+)$/);   // 「ふだんの持ち時間は 1手番20秒」→ 前と、大きく出す「1手番20秒」
     const startLv = intList(t.startLv).filter((v) => v <= 5);
+    // 秒数ルーレット（任意）: from〜to を step きざみ。どれも同じ確率
+    let roulette = null;
+    const ro = t.roulette;
+    if (ro && typeof ro === 'object') {
+      const from = Number(ro.from);
+      const to = Number(ro.to);
+      const step = Number(ro.step);
+      if ([from, to, step].every(Number.isFinite) && step > 0 && to > from) {
+        const values = [];
+        for (let v = from; v <= to + 1e-9 && values.length <= 100; v += step) values.push(Math.round(v * 1000) / 1000);
+        if (values.length >= 2 && values.length <= 100) roulette = { title: str(ro.title) || '秒数ルーレット', unit: str(ro.unit) || '秒', howto: str(ro.howto), values };
+      }
+    }
     return {
+      roulette,
       title: str(t.title) || '持ち時間ガチャ',
       base, baseLead: m ? m[1] : '', baseMain: m ? m[2] : base,
       howto: str(t.howto),
@@ -1567,9 +1689,13 @@ a { color: inherit; }
   let tab = saved && TABS.includes(saved.tab) ? saved.tab : 'gacha';
   // いまの持ち時間・持ち時間の難易度・直近の履歴（前の版の保存に無くても、初期の値で始める）
   function readTimer(t) {
-    const o = { cur: null, lv: T ? T.startLv.slice() : [], hist: [] };
+    const o = { drawn: [], n: 1, lv: T ? T.startLv.slice() : [], hist: [], roul: null };
     if (!T || !t || typeof t !== 'object') return o;
-    if (T.byId.has(Number(t.cur))) o.cur = Number(t.cur);
+    // 引いたカード（前の版の「いまの持ち時間」1枚も、引いたカードとして読む）
+    const drawn = Array.isArray(t.drawn) ? t.drawn : (t.cur != null ? [t.cur] : []);
+    o.drawn = [...new Set(drawn.map(Number).filter((id) => T.byId.has(id)))].slice(0, 3);
+    if ([1, 2, 3].includes(Number(t.n))) o.n = Number(t.n);
+    if (T.roulette && T.roulette.values.includes(Number(t.roul))) o.roul = Number(t.roul);
     if (Array.isArray(t.lv)) {
       const lv = [...new Set(t.lv.map(Number).filter((v) => Number.isInteger(v) && v >= 1 && v <= 5))].sort((a, b) => a - b);
       if (lv.length) o.lv = lv;
@@ -1597,12 +1723,43 @@ a { color: inherit; }
     return o;
   }
   const mstate = readTeam(saved && saved.team);
+  // 使用カード（ルールは5枚まで・持ち時間は1つ・チーム戦はチーム戦にしている間だけ3枚まで）。前の版の保存には無いので、空で始める
+  function readUsed(u) {
+    const o = { rules: [], timer: null, team: [] };
+    if (!u || typeof u !== 'object') return o;
+    if (Array.isArray(u.rules)) {
+      u.rules.map(Number).forEach((id) => {
+        const r = D.byId.get(id);
+        if (!r || o.rules.includes(id) || o.rules.length >= USE_MAX_RULES) return;
+        if (mstate.fmt && r.x.includes('team')) return;
+        if (o.rules.some((x) => clash(D.byId.get(x), r))) return;
+        o.rules.push(id);
+      });
+    }
+    const ut = u.timer;
+    if (T && ut && typeof ut === 'object') {
+      if (ut.kind === 'card' && T.byId.has(Number(ut.id))) o.timer = { kind: 'card', id: Number(ut.id) };
+      else if (ut.kind === 'sec' && T.roulette && T.roulette.values.includes(Number(ut.value))) o.timer = { kind: 'sec', value: Number(ut.value) };
+    }
+    if (TM && mstate.fmt && Array.isArray(u.team)) {
+      u.team.map(Number).forEach((id) => {
+        const c = TM.byId.get(id);
+        if (!c || o.team.includes(id) || o.team.length >= USE_MAX_TEAM) return;
+        if (c.fmt.length && !c.fmt.includes(mstate.fmt)) return;
+        if (o.team.some((x) => clash(TM.byId.get(x), c))) return;
+        o.team.push(id);
+      });
+    }
+    return o;
+  }
+  const used = readUsed(saved && saved.used);
 
   function save() {
     try {
       const data = { v: 1, settings, hand, history: hist, tab };
       if (T) data.timer = tstate;
       if (TM) data.team = mstate;
+      data.used = used;
       localStorage.setItem(STORE_KEY, JSON.stringify(data));
     } catch (e) { /* 保存できなくても続ける */ }
   }
@@ -1757,7 +1914,7 @@ a { color: inherit; }
     if (r.lv < 5) stars.append(el('span', 'stars-off', '★'.repeat(5 - r.lv)));
     strip.append(stars, el('span', 'sr-only', '難易度★' + r.lv));
     if (lvName(r.lv)) strip.append(el('span', 'card-lv', lvName(r.lv)));
-    strip.append(el('span', 'card-no', r.noLabel || noStr(r.id)));
+    strip.append(el('span', 'used-badge', '使用中'), el('span', 'card-no', r.noLabel || noStr(r.id)));
     const body = el('div', 'card-body');
     const tags = el('div', 'card-tags');
     tags.append(el('span', 'tag', r.tagLabel || catName(r.cat)));
@@ -1830,6 +1987,31 @@ a { color: inherit; }
     card.addEventListener('animationend', finish, { once: true });
     setTimeout(finish, delay + 1300);
   }
+  // 引いたカードのボタン。prefix は hand / timer / team、kind は rule / timer / team
+  function cardActions(prefix, kind, id, i) {
+    const actions = el('div', 'card-actions');
+    const ub = button('btn btn-use', '使用する', prefix + '-use-' + (i + 1));
+    ub.dataset.act = 'use';
+    ub.dataset.idx = String(i);
+    ub.dataset.use = kind;
+    ub.dataset.id = String(id);
+    ub.setAttribute('aria-pressed', 'false');
+    const rb = button('btn btn-line', '引き直す', prefix + '-reroll-' + (i + 1));
+    rb.dataset.act = 'reroll';
+    rb.dataset.idx = String(i);
+    const xb = button('btn btn-quiet', '外す', prefix + '-remove-' + (i + 1));
+    xb.dataset.act = 'remove';
+    xb.dataset.idx = String(i);
+    actions.append(ub, rb, xb);
+    return actions;
+  }
+  function cardMsg(id) {
+    const m = el('p', 'card-msg');
+    m.id = id;
+    m.setAttribute('role', 'status');
+    m.hidden = true;
+    return m;
+  }
   // opts.deal: 'all'（全部めくる）か、めくるカードの番号。opts.focus: { idx, act }
   function renderHand(opts) {
     opts = opts || {};
@@ -1847,23 +2029,12 @@ a { color: inherit; }
     rules.forEach((r, i) => {
       const slot = el('div', 'slot');
       const { card, body } = buildCard(r, false);
-      const actions = el('div', 'card-actions');
-      const rb = button('btn btn-line', '引き直す', 'hand-reroll-' + (i + 1));
-      rb.dataset.act = 'reroll';
-      rb.dataset.idx = String(i);
-      const xb = button('btn btn-quiet', '外す', 'hand-remove-' + (i + 1));
-      xb.dataset.act = 'remove';
-      xb.dataset.idx = String(i);
-      actions.append(rb, xb);
-      const msg = el('p', 'card-msg');
-      msg.id = 'hand-msg-' + (i + 1);
-      msg.setAttribute('role', 'status');
-      msg.hidden = true;
-      body.append(actions, msg);
+      body.append(cardActions('hand', 'rule', r.id, i), cardMsg('hand-msg-' + (i + 1)));
       slot.append(card);
       if (animate && (opts.deal === 'all' || opts.deal === i)) deal(slot, card, base + (opts.deal === 'all' ? i * 160 : 0));
       box.append(slot);
     });
+    refreshUsedMarks();
     if (opts.focus) {
       const target = rules.length ? $('hand-' + opts.focus.act + '-' + (Math.min(opts.focus.idx, rules.length - 1) + 1)) : $('spin');
       if (target) { try { target.focus({ preventScroll: true }); } catch (e) { target.focus(); } }
@@ -1910,7 +2081,7 @@ a { color: inherit; }
     const cands = pool().filter((r) => !hand.ids.includes(r.id));
     const { picked } = drawSet(cands, 1, recentSet(), keep);
     if (!picked.length) {
-      toolMsg(cands.length ? 'いまのルールといっしょに使えるルールが、もう残ってないよ' : 'いまの条件で足せるルールが、もう残ってないよ');
+      toolMsg(cands.length ? '引いたカードといっしょに使えるルールが、もう残ってないよ' : 'いまの条件で足せるルールが、もう残ってないよ');
       return;
     }
     const r = picked[0];
@@ -1929,7 +2100,8 @@ a { color: inherit; }
     const b = ev.target.closest('button[data-act]');
     if (!b) return;
     const i = Number(b.dataset.idx);
-    if (b.dataset.act === 'reroll') reroll(i);
+    if (b.dataset.act === 'use') toggleUse('rule', Number(b.dataset.id), $('hand-msg-' + (i + 1)));
+    else if (b.dataset.act === 'reroll') reroll(i);
     else removeAt(i);
   });
   $('add-one').addEventListener('click', addOne);
@@ -1947,25 +2119,28 @@ a { color: inherit; }
   });
 
   // ---------- テキストでコピー ----------
+  // 使用カードがあれば使用カードを、無ければ引いたカードを出す（どのタブのボタンも同じ）
   function handText() {
-    const rules = handRules();
-    const tc = timerCard();
     const f = fmtNow();
-    if (!rules.length && !tc && !f) return '';
+    const useMode = anyUsed();
+    const rules = useMode ? usedRules() : handRules();
+    const teamCards = f ? (useMode ? usedTeam() : teamHand()) : [];
+    const timers = useMode ? (used.timer ? [used.timer] : []) : timerDrawn().map((c) => ({ kind: 'card', id: c.id }));
+    if (!rules.length && !f && !timers.length) return '';
     const out = ['【' + D.copyTitle + '】'];
     rules.forEach((r, i) => {
       out.push('');
       out.push(circled(i + 1) + ' ' + noStr(r.id) + ' ' + r.title + '（' + lvLabel(r.lv) + '）');
       if (r.text) out.push(r.text);
-      r.list.forEach((s) => out.push('・' + s));
+      r.list.forEach((x) => out.push('・' + x));
       if (r.need) out.push('用意するもの：' + r.need);
       if (r.p) out.push('※' + r.p + '人専用');
     });
     if (f) {
       out.push('');
       out.push('【' + TM.title + '】' + f.name);
-      f.base.forEach((b) => out.push('・' + b));
-      teamHand().forEach((c) => {
+      f.base.forEach((x) => out.push('・' + x));
+      teamCards.forEach((c) => {
         out.push('');
         out.push(c.noLabel + ' ' + c.title + '（' + lvLabel(c.lv) + '）');
         if (c.text) out.push(c.text);
@@ -1973,12 +2148,14 @@ a { color: inherit; }
         if (c.need) out.push('用意するもの：' + c.need);
       });
     }
-    if (tc) {
+    timers.forEach((u) => {
       out.push('');
+      if (u.kind === 'sec') { out.push('【持ち時間】' + R.title + ' ' + u.value + R.unit); return; }
+      const tc = T.byId.get(u.id);
       out.push('【持ち時間】' + tc.noLabel + ' ' + tc.title + '（' + lvLabel(tc.lv) + '）');
       if (tc.text) out.push(tc.text);
       if (tc.need) out.push('用意するもの：' + tc.need);
-    }
+    });
     return out.join('\n');
   }
   function copyFallback(text, ui) {
@@ -2005,6 +2182,7 @@ a { color: inherit; }
     { btn: $('copy-text'), box: $('copy-fallback-box'), ta: $('copy-fallback'), close: $('copy-fallback-close'), msg: toolMsg },
     { btn: $('timer-copy'), box: $('timer-copy-fallback-box'), ta: $('timer-copy-fallback'), close: $('timer-copy-fallback-close'), msg: (t) => timerMsg(t) },
     { btn: $('team-copy'), box: $('team-copy-fallback-box'), ta: $('team-copy-fallback'), close: $('team-copy-fallback-close'), msg: (t) => teamMsg(t) },
+    { btn: $('used-copy'), box: $('used-copy-fallback-box'), ta: $('used-copy-fallback'), close: $('used-copy-fallback-close'), msg: (t) => usedMsg(t) },
   ];
   COPY_UIS.forEach((ui) => {
     ui.btn.addEventListener('click', () => doCopy(ui));
@@ -2013,18 +2191,20 @@ a { color: inherit; }
   // コピーする中身が変わったら、出しっぱなしの手作業用の文は引っこめる
   function hideCopyFallbacks() { COPY_UIS.forEach((ui) => { ui.box.hidden = true; }); }
   function updateCopyButtons() {
-    const none = !handRules().length && !timerCard() && !fmtNow();
+    const none = !anyUsed() && !handRules().length && !timerDrawn().length && !fmtNow();
     COPY_UIS.forEach((ui) => { ui.btn.disabled = none; });
   }
 
-  // ---------- 画面をつけたままにする ----------
-  const wakeBox = $('wake-toggle');
+  // ---------- 画面をつけたままにする（ガチャのタブと使用中のタブの2か所。同じ1つの設定） ----------
+  const WAKE_BOXES = [$('wake-toggle'), $('used-wake-toggle')];
+  const wakeMsgFor = (box) => (box && box.id === 'used-wake-toggle' ? usedMsg : toolMsg);
   let wakeLock = null;
   let wakeWanted = false;
-  function wakeFail() {
+  const setWakeBoxes = (on) => WAKE_BOXES.forEach((b) => { b.checked = on; });
+  function wakeFail(msg) {
     wakeWanted = false;
-    wakeBox.checked = false;
-    toolMsg('この端末では使えないみたい');
+    setWakeBoxes(false);
+    (msg || toolMsg)('この端末では使えないみたい');
   }
   function askWake() {
     try {
@@ -2040,21 +2220,24 @@ a { color: inherit; }
     wakeLock = null;
     if (s) { try { s.release().catch(() => {}); } catch (e) { /* もう外れている */ } }
   }
-  wakeBox.addEventListener('change', () => {
-    if (!wakeBox.checked) {
+  WAKE_BOXES.forEach((box) => box.addEventListener('change', () => {
+    const msg = wakeMsgFor(box);
+    if (!box.checked) {
       wakeWanted = false;
+      setWakeBoxes(false);
       releaseWake();
-      toolMsg('');
+      msg('');
       return;
     }
-    if (!navigator.wakeLock || typeof navigator.wakeLock.request !== 'function') { wakeFail(); return; }
+    if (!navigator.wakeLock || typeof navigator.wakeLock.request !== 'function') { wakeFail(msg); return; }
     wakeWanted = true;
+    setWakeBoxes(true);
     askWake().then((ok) => {
-      if (!ok) { wakeFail(); return; }
+      if (!ok) { wakeFail(msg); return; }
       if (!wakeWanted) { releaseWake(); return; }
-      toolMsg('画面が消えないようにしたよ');
+      msg('画面が消えないようにしたよ');
     });
-  });
+  }));
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && wakeWanted && !wakeLock) {
       askWake().then((ok) => { if (!ok) wakeFail(); else if (!wakeWanted) releaseWake(); });
@@ -2186,7 +2369,7 @@ a { color: inherit; }
       time.dateTime = new Date(e.t).toISOString();
       li.append(time);
       if (hand.hid === e.id && sameIds(hand.ids, e.ids)) {
-        li.append(el('span', 'hist-now', 'いまのルール'));
+        li.append(el('span', 'hist-now', '引いたカード'));
       } else {
         const b = button('btn btn-sea-line btn-sm hist-back', 'この組み合わせに戻す', 'hist-back-' + e.id);
         b.dataset.hid = e.id;
@@ -2261,8 +2444,10 @@ a { color: inherit; }
     D.rules.forEach((r) => {
       const { card, body } = buildCard(r, true);
       const actions = el('div', 'card-actions');
-      const b = button('btn btn-line', 'いまのルールに入れる', 'add-' + r.id);
+      const b = button('btn btn-use', '使用する', 'use-rule-' + r.id);
       b.dataset.id = String(r.id);
+      b.dataset.use = 'rule';
+      b.setAttribute('aria-pressed', 'false');
       actions.append(b);
       const msg = el('p', 'card-msg');
       msg.setAttribute('role', 'status');
@@ -2274,7 +2459,7 @@ a { color: inherit; }
       const b = ev.target.closest('button[data-id]');
       if (!b) return;
       const it = listItems.get(Number(b.dataset.id));
-      if (it) addFromList(it);
+      if (it) toggleUse('rule', it.r.id, it.msg);
     });
     const lvBox = $('list-lv');
     lvBox.append(filterChip('list-lv-all', 'ぜんぶ', 0, () => { listF.lv.clear(); updateList(); }));
@@ -2348,38 +2533,11 @@ a { color: inherit; }
     ro.observe($('team-grid'));
   } else window.addEventListener('resize', relayoutIfNeeded);
 
-  function refreshListMarks() {
-    listItems.forEach((it) => {
-      const inHand = hand.ids.includes(it.r.id);
-      it.btn.textContent = inHand ? 'いまのルールに入ってる' : 'いまのルールに入れる';
-      it.btn.classList.toggle('is-in', inHand);
-    });
-  }
-  function addFromList(it) {
-    const r = it.r;
-    if (hand.ids.includes(r.id)) { say(it.msg, 'もう いまのルールに入ってるよ', 'info'); return; }
-    const fm = fmtNow();
-    if (fm && r.x.includes('team')) {
-      say(it.msg, TM.title + '（' + fm.name + '）にしている間は使えないよ。' + TM.title + 'のタブで「' + TM.title + 'にしない」を選ぶと入れられるよ', 'warn');
-      return;
-    }
-    const bad = handRules().filter((h) => clash(h, r));
-    if (bad.length) {
-      say(it.msg, bad.map((b) => noStr(b.id) + '「' + b.title + '」').join('、') + 'といっしょには使えないよ', 'warn');
-      return;
-    }
-    hand.ids.push(r.id);
-    if (!hand.seen.includes(r.id)) hand.seen.push(r.id);
-    setNotice('');
-    renderHand();
-    afterHandChange();
-    let t = 'いまのルールに入れたよ（' + hand.ids.length + '枚目）';
-    if (r.p && settings.players && r.p !== settings.players) t += '。' + r.p + '人専用のルールだよ（ガチャの人数は' + settings.players + '人）';
-    say(it.msg, t, 'ok');
-  }
+  // 一覧の印は、使用カードかどうかで決まる
+  function refreshListMarks() { refreshUsedMarks(); }
 
   // ---------- 持ち時間 ----------
-  const timerCard = () => (T && tstate.cur ? T.byId.get(tstate.cur) || null : null);
+  const R = T && T.roulette ? T.roulette : null;   // 秒数ルーレット（無いゲームは null）
   const timerItems = new Map();   // id → { c, card, btn, msg }
   let timerCols = 0;
   let timerHintTimer = 0;
@@ -2402,22 +2560,11 @@ a { color: inherit; }
     n.hidden = !text;
   }
   const timerPool = () => T.cards.filter((c) => tstate.lv.includes(c.lv));
-  // 1枚引く。直近3回に出たもの（いまの1枚もふくむ）は、ほかが無いときだけ使う
-  function timerDraw(excludeCur) {
-    let cands = timerPool();
-    if (excludeCur) cands = cands.filter((c) => c.id !== tstate.cur);
-    if (!cands.length) return { card: null, stale: false };
-    const avoid = new Set(tstate.hist.slice(0, RECENT_N));
-    if (tstate.cur) avoid.add(tstate.cur);
-    const fresh = cands.filter((c) => !avoid.has(c.id));
-    const from = fresh.length ? fresh : cands;
-    return { card: from[Math.floor(Math.random() * from.length)], stale: !fresh.length };
-  }
-  function setTimer(c) {
-    tstate.cur = c ? c.id : null;
-    if (c) tstate.hist = [c.id].concat(tstate.hist.filter((h) => h !== c.id)).slice(0, TIMER_HISTORY_MAX);
-    save();
-    refreshTimerMarks();
+  function timerDrawn() { return T ? tstate.drawn.map((id) => T.byId.get(id)).filter(Boolean) : []; }
+  // 直近（3回ぶん）に出たカードと、いま引いているカードは、ほかが無いときだけ使う
+  const timerAvoid = () => new Set(tstate.hist.slice(0, RECENT_N * tstate.n).concat(tstate.drawn));
+  function pushTimerHist(ids) {
+    tstate.hist = ids.concat(tstate.hist.filter((h) => !ids.includes(h))).slice(0, TIMER_HISTORY_MAX);
   }
   function toggleTimerLv(lv) {
     const on = tstate.lv.includes(lv);
@@ -2433,68 +2580,123 @@ a { color: inherit; }
       b.setAttribute('aria-pressed', String(tstate.lv.includes(lv)));
       b.querySelector('.lv-count').textContent = T.cards.filter((c) => c.lv === lv).length + '種';
     }
+    $('timer-count-' + tstate.n).checked = true;
     const k = timerPool().length;
     $('timer-spin').disabled = k === 0;
     const line = $('timer-pool-line');
     line.textContent = '';
     if (!k) line.append('いまの条件だと、引けるカードがないよ');
-    else line.append('いまの条件で', el('b', null, String(k)), '種から1枚引くよ');
+    else if (k < tstate.n) line.append('いまの条件だと', el('b', null, String(k)), '種だけ。' + k + '枚まで引けるよ');
+    else line.append('いまの条件で', el('b', null, String(k)), '種から' + tstate.n + '枚引くよ');
   }
-  // いまの持ち時間（引いていないときは、ふだんの持ち時間のまま）
-  function renderTimerNow(opts) {
+  // 引いたカード（引いていないときは、ふだんの持ち時間のまま）
+  function renderTimerHand(opts) {
     opts = opts || {};
     closeTip();
-    const box = $('timer-now');
-    box.textContent = '';
     hideCopyFallbacks();
     updateCopyButtons();
-    const c = timerCard();
-    if (!c) {
-      const e = el('div', 'timer-empty');
-      const p1 = el('p');
-      p1.append(el('b', null, 'まだ引いていないよ。'));
-      const p2 = el('p');
-      if (T.baseMain) p2.append('ふだんどおり ', el('span', 'timer-empty-main', T.baseMain));
-      else p2.append('ふだんどおりの持ち時間で遊ぼう');
-      e.append(p1, p2);
-      box.append(e);
-      if (opts.focus) { try { $('timer-spin').focus({ preventScroll: true }); } catch (er) { $('timer-spin').focus(); } }
-      return;
-    }
-    const slot = el('div', 'slot');
-    const { card, body } = buildCard(c, false);
-    const actions = el('div', 'card-actions');
-    const rb = button('btn btn-line', '引き直す', 'timer-reroll');
-    rb.dataset.act = 'reroll';
-    const xb = button('btn btn-quiet', '外す', 'timer-remove');
-    xb.dataset.act = 'remove';
-    actions.append(rb, xb);
-    const msg = el('p', 'card-msg');
-    msg.id = 'timer-card-msg';
-    msg.setAttribute('role', 'status');
-    msg.hidden = true;
-    body.append(actions, msg);
-    slot.append(card);
-    if (opts.deal && !reduced()) deal(slot, card, opts.baseDelay || 0);
-    box.append(slot);
-    if (opts.focus) { const t = $('timer-' + opts.focus); if (t) { try { t.focus({ preventScroll: true }); } catch (er) { t.focus(); } } }
-  }
-  function refreshTimerMarks() {
-    timerItems.forEach((it) => {
-      const now = tstate.cur === it.c.id;
-      it.btn.textContent = now ? 'いまの持ち時間' : 'これにする';
-      it.btn.classList.toggle('is-in', now);
+    const box = $('timer-hand');
+    const cards = timerDrawn();
+    box.textContent = '';
+    box.dataset.n = String(cards.length);
+    $('timer-hand-count').textContent = cards.length ? cards.length + '枚' : '';
+    $('timer-empty').hidden = cards.length > 0;
+    const animate = opts.deal != null && !reduced();
+    const base = opts.baseDelay || 0;
+    cards.forEach((c, i) => {
+      const slot = el('div', 'slot');
+      const { card, body } = buildCard(c, false);
+      body.append(cardActions('timer', 'timer', c.id, i), cardMsg('timer-msg-' + (i + 1)));
+      slot.append(card);
+      if (animate && (opts.deal === 'all' || opts.deal === i)) deal(slot, card, base + (opts.deal === 'all' ? i * 160 : 0));
+      box.append(slot);
     });
+    refreshUsedMarks();
+    if (opts.focus) {
+      const target = cards.length ? $('timer-' + opts.focus.act + '-' + (Math.min(opts.focus.idx, cards.length - 1) + 1)) : $('timer-spin');
+      if (target) { try { target.focus({ preventScroll: true }); } catch (e) { target.focus(); } }
+    }
   }
+  function spinTimer() {
+    const cands = timerPool();
+    if (!cands.length) { timerNotice('いまの条件だと引けるカードがないよ。難易度を増やしてみて'); return; }
+    const { picked, stale } = drawSet(cands, tstate.n, timerAvoid(), []);
+    tstate.drawn = picked.map((c) => c.id);
+    pushTimerHist(tstate.drawn);
+    save();
+    let msg = '';
+    if (picked.length < tstate.n) msg = '条件に合うカードが' + cands.length + '種だけだから、' + picked.length + '枚引いたよ';
+    else if (stale > 0) msg = '候補が少ないから、最近出たカードもまぜたよ';
+    timerNotice(msg);
+    const head = $('timer-head');
+    const scroll = needScrollTo(head);
+    renderTimerHand({ deal: 'all', baseDelay: scroll ? 260 : 0 });
+    if (scroll) scrollToNode(head, 'start');
+  }
+  function rerollTimer(idx) {
+    const keep = timerDrawn().filter((_, i) => i !== idx);
+    const cands = timerPool().filter((c) => !tstate.drawn.includes(c.id));
+    const { picked } = drawSet(cands, 1, timerAvoid(), keep);
+    if (!picked.length) { say($('timer-msg-' + (idx + 1)), 'いまの条件で、ほかに引けるカードがないよ', 'warn'); return; }
+    tstate.drawn[idx] = picked[0].id;
+    pushTimerHist([picked[0].id]);
+    save();
+    timerNotice('');
+    renderTimerHand({ deal: idx, focus: { idx, act: 'reroll' } });
+  }
+  function removeTimer(idx) {
+    tstate.drawn.splice(idx, 1);
+    save();
+    timerNotice('');
+    renderTimerHand({ focus: { idx, act: 'remove' } });
+  }
+  function refreshTimerMarks() { refreshUsedMarks(); }
   function layoutTimerList() {
     if (!T || $('panel-timer').hidden) return;
     closeTip();
     timerCols = fillColumns($('timer-grid'), T.cards.map((c) => timerItems.get(c.id).card));
   }
-  function showTimerHead() {
-    const head = $('timer-head');
-    if (needScrollTo(head)) { scrollToNode(head, 'start'); return true; }
-    return false;
+  // 秒数ルーレット: 数字が切り替わって止まる（動きを減らす設定では、すぐ結果）
+  let roulBusy = false;
+  function renderRoulette() {
+    if (!R) return;
+    const v = tstate.roul;
+    $('roul-num').textContent = v == null ? '？' : String(v);
+    $('roul-spin').textContent = v == null ? 'ルーレットを回す' : 'もう一度回す';
+    $('roul-use').hidden = v == null;
+    refreshUsedMarks();
+  }
+  function spinRoulette() {
+    if (roulBusy) return;
+    const vals = R.values;
+    const result = vals[Math.floor(Math.random() * vals.length)];   // 先に決める（どれも同じ確率）
+    const finish = () => {
+      roulBusy = false;
+      $('roul-spin').disabled = false;
+      $('roul-use').disabled = false;
+      tstate.roul = result;
+      save();
+      renderRoulette();
+      $('roul-status').textContent = R.title + 'は ' + result + R.unit + ' に決まったよ';
+    };
+    say($('roul-msg'), '');
+    if (reduced()) { finish(); return; }
+    roulBusy = true;
+    $('roul-spin').disabled = true;
+    $('roul-use').disabled = true;
+    // 数を1つずつ進めて、だんだん遅くして、決まった数で止まる（何通りあっても18回・2秒たらず）
+    const TICKS = 18;
+    let i = ((vals.indexOf(result) - TICKS) % vals.length + vals.length) % vals.length;
+    let left = TICKS;
+    let delay = 45;
+    const tick = () => {
+      i = (i + 1) % vals.length;
+      $('roul-num').textContent = String(vals[i]);
+      if (--left <= 0) { finish(); return; }
+      delay *= 1.08;
+      setTimeout(tick, delay);
+    };
+    tick();
   }
   function buildTimer() {
     if (!T) return;
@@ -2508,6 +2710,9 @@ a { color: inherit; }
     $('timer-base-main').textContent = T.baseMain;
     $('timer-howto').textContent = T.howto;
     $('timer-howto').hidden = !T.howto;
+    const line = $('timer-empty-line');
+    if (T.baseMain) line.append('ふだんどおり ', el('span', 'timer-empty-main', T.baseMain));
+    else line.append('ふだんどおりの持ち時間で遊ぼう');
     const row = $('timer-lv-row');
     for (let lv = 1; lv <= 5; lv++) {
       const b = button('lv-toggle', null, 'timer-lv-' + lv);
@@ -2516,11 +2721,25 @@ a { color: inherit; }
       b.addEventListener('click', () => toggleTimerLv(lv));
       row.append(b);
     }
+    [1, 2, 3].forEach((n) => {
+      const input = el('input');
+      input.type = 'radio';
+      input.name = 'timer-count';
+      input.id = 'timer-count-' + n;
+      input.value = String(n);
+      input.addEventListener('change', () => { tstate.n = n; save(); renderTimerSettings(); });
+      const lab = el('label');
+      lab.htmlFor = input.id;
+      lab.append(String(n), el('small', null, '枚'));
+      $('timer-count-seg').append(input, lab);
+    });
     T.cards.forEach((c) => {
       const { card, body } = buildCard(c, true);
       const actions = el('div', 'card-actions');
-      const b = button('btn btn-line', 'これにする', 'timer-pick-' + c.id);
+      const b = button('btn btn-use', '使用する', 'use-timer-' + c.id);
       b.dataset.id = String(c.id);
+      b.dataset.use = 'timer';
+      b.setAttribute('aria-pressed', 'false');
       actions.append(b);
       const msg = el('p', 'card-msg');
       msg.setAttribute('role', 'status');
@@ -2529,43 +2748,265 @@ a { color: inherit; }
       timerItems.set(c.id, { c, card, btn: b, msg });
     });
     $('timer-list-count').textContent = T.cards.length + '種';
-    $('timer-spin').addEventListener('click', () => {
-      const { card, stale } = timerDraw(false);
-      if (!card) { timerNotice('いまの条件だと引けるカードがないよ。難易度を増やしてみて'); return; }
-      setTimer(card);
-      timerNotice(stale ? '候補が少ないから、最近出たカードもまぜたよ' : '');
-      const scroll = needScrollTo($('timer-head'));
-      renderTimerNow({ deal: true, baseDelay: scroll ? 260 : 0 });
-      if (scroll) scrollToNode($('timer-head'), 'start');
-    });
-    $('timer-now').addEventListener('click', (ev) => {
+    $('timer-spin').addEventListener('click', spinTimer);
+    $('timer-hand').addEventListener('click', (ev) => {
       const b = ev.target.closest('button[data-act]');
       if (!b) return;
-      if (b.dataset.act === 'reroll') {
-        const { card } = timerDraw(true);
-        if (!card) { say($('timer-card-msg'), 'いまの条件で、ほかに引けるカードがないよ', 'warn'); return; }
-        setTimer(card);
-        timerNotice('');
-        renderTimerNow({ deal: true, focus: 'reroll' });
-      } else {
-        setTimer(null);
-        timerNotice('');
-        renderTimerNow({ focus: 'spin' });
-      }
+      const i = Number(b.dataset.idx);
+      if (b.dataset.act === 'use') toggleUse('timer', Number(b.dataset.id), $('timer-msg-' + (i + 1)));
+      else if (b.dataset.act === 'reroll') rerollTimer(i);
+      else removeTimer(i);
     });
     $('timer-grid').addEventListener('click', (ev) => {
       const b = ev.target.closest('button[data-id]');
       if (!b) return;
       const it = timerItems.get(Number(b.dataset.id));
-      if (!it) return;
-      if (tstate.cur === it.c.id) { say(it.msg, 'もう いまの持ち時間だよ', 'info'); return; }
-      setTimer(it.c);
-      timerNotice('');
-      renderTimerNow();
-      say(it.msg, 'いまの持ち時間にしたよ', 'ok');
-      showTimerHead();
+      if (it) toggleUse('timer', it.c.id, it.msg);
     });
+    if (R) {
+      $('step-roul').hidden = false;
+      $('step-roul-name').textContent = R.title;
+      $('roul').hidden = false;
+      $('roul-title').textContent = R.title;
+      $('roul-howto').textContent = R.howto;
+      $('roul-howto').hidden = !R.howto;
+      $('roul-unit').textContent = R.unit;
+      $('roul-spin').addEventListener('click', spinRoulette);
+      $('roul-use').addEventListener('click', () => { if (tstate.roul != null) toggleUse('sec', tstate.roul, $('roul-msg')); });
+    }
   }
+
+  // ---------- 使用カード ----------
+  function usedRules() { return used.rules.map((id) => D.byId.get(id)).filter(Boolean); }
+  function usedTeam() { return TM ? used.team.map((id) => TM.byId.get(id)).filter(Boolean) : []; }
+  function anyUsed() { return used.rules.length > 0 || !!used.timer || used.team.length > 0; }
+  function isUsed(kind, id) {
+    if (kind === 'rule') return used.rules.includes(id);
+    if (kind === 'team') return used.team.includes(id);
+    if (kind === 'timer') return !!(used.timer && used.timer.kind === 'card' && used.timer.id === id);
+    if (kind === 'sec') return !!(used.timer && used.timer.kind === 'sec' && used.timer.value === id);
+    return false;
+  }
+  const timerLabel = (u) => (u.kind === 'sec' ? R.title + ' ' + u.value + R.unit : T.byId.get(u.id).noLabel + ' ' + T.byId.get(u.id).title);
+  let usedMsgTimer = 0;
+  function usedMsg(text) {
+    const n = $('used-msg');
+    clearTimeout(usedMsgTimer);
+    n.textContent = text || '';
+    if (text) usedMsgTimer = setTimeout(() => { n.textContent = ''; }, 6000);
+  }
+  // 使用する／使用中を押したとき。msg は、その場の一言を出すところ
+  function toggleUse(kind, id, msg) {
+    if (isUsed(kind, id)) { unuse(kind, id); say(msg, '使用をやめたよ', 'info'); return; }
+    if (kind === 'rule') {
+      const r = D.byId.get(id);
+      const f = fmtNow();
+      if (f && r.x.includes('team')) { say(msg, TM.title + '（' + f.name + '）にしている間は使えないよ', 'warn'); return; }
+      const bad = usedRules().filter((u) => clash(u, r));
+      if (bad.length) { say(msg, '使用中の' + bad.map((x) => noStr(x.id) + '「' + x.title + '」').join('、') + 'といっしょには使えないよ', 'warn'); return; }
+      if (used.rules.length >= USE_MAX_RULES) { say(msg, '使えるのは' + USE_MAX_RULES + '枚まで。どれかを使用カードからやめてね', 'warn'); return; }
+      used.rules.push(id);
+      afterUse();
+      let t = '使用カードに入れたよ（ルール ' + used.rules.length + '/' + USE_MAX_RULES + '）';
+      if (r.p && settings.players && r.p !== settings.players) t += '。' + r.p + '人専用のルールだよ（ガチャの人数は' + settings.players + '人）';
+      say(msg, t, 'ok');
+      return;
+    }
+    if (kind === 'timer' || kind === 'sec') {
+      const prev = used.timer;
+      used.timer = kind === 'timer' ? { kind: 'card', id } : { kind: 'sec', value: id };
+      afterUse();
+      say(msg, prev ? '持ち時間を「' + timerLabel(used.timer) + '」に入れ替えたよ' : '使用カードに入れたよ（持ち時間）', 'ok');
+      return;
+    }
+    if (kind === 'team') {
+      const c = TM.byId.get(id);
+      const f = fmtNow();
+      if (!f) { say(msg, TM.title + 'の形を選んでいるときだけ使えるよ', 'warn'); return; }
+      if (c.fmt.length && !c.fmt.includes(f.id)) { say(msg, f.name + 'では使えないカードだよ', 'warn'); return; }
+      const bad = usedTeam().filter((u) => clash(u, c));
+      if (bad.length) { say(msg, '使用中の' + bad.map((x) => x.noLabel + '「' + x.title + '」').join('、') + 'といっしょには使えないよ', 'warn'); return; }
+      if (used.team.length >= USE_MAX_TEAM) { say(msg, '使えるのは' + USE_MAX_TEAM + '枚まで。どれかを使用カードからやめてね', 'warn'); return; }
+      used.team.push(id);
+      afterUse();
+      say(msg, '使用カードに入れたよ（' + TM.title + ' ' + used.team.length + '/' + USE_MAX_TEAM + '）', 'ok');
+    }
+  }
+  function unuse(kind, id) {
+    if (kind === 'rule') used.rules = used.rules.filter((x) => x !== id);
+    else if (kind === 'team') used.team = used.team.filter((x) => x !== id);
+    else used.timer = null;
+    afterUse();
+  }
+  function afterUse() {
+    save();
+    refreshUsedMarks();
+    renderUsed();
+    hideCopyFallbacks();
+    updateCopyButtons();
+  }
+  // 「使用する」と「使用中」のボタン、カードの「使用中」の印
+  function markUse(b, on) {
+    b.textContent = on ? '使用中' : '使用する';
+    b.setAttribute('aria-pressed', String(on));
+    b.classList.toggle('is-on', on);
+    const card = b.closest('.card');
+    if (card) card.classList.toggle('is-used', on);
+  }
+  function refreshUsedMarks() {
+    document.querySelectorAll('.hand button[data-use]').forEach((b) => markUse(b, isUsed(b.dataset.use, Number(b.dataset.id))));
+    listItems.forEach((it) => markUse(it.btn, isUsed('rule', it.r.id)));
+    timerItems.forEach((it) => markUse(it.btn, isUsed('timer', it.c.id)));
+    teamItems.forEach((it) => markUse(it.btn, isUsed('team', it.c.id)));
+    if (R) {
+      const b = $('roul-use');
+      const on = tstate.roul != null && isUsed('sec', tstate.roul);
+      b.textContent = on ? '使用中' : '使用する';
+      b.setAttribute('aria-pressed', String(on));
+      b.classList.toggle('is-on', on);
+    }
+  }
+  // 使用中のタブ: 小さい見出し（★・No.・ジャンル・名前）と、少し大きい本文。補足は出さない
+  function ucard(kind, c) {
+    const a = el('article', 'ucard');
+    a.dataset.lv = String(c.lv);
+    const meta = el('div', 'ucard-meta');
+    meta.append(el('span', 'ucard-lv', '★' + c.lv + (lvName(c.lv) ? ' ' + lvName(c.lv) : '')), el('span', 'ucard-no', c.noLabel || noStr(c.id)));
+    meta.append(el('span', 'ucard-tag', kind === 'rule' ? catName(c.cat) : kind === 'timer' ? '持ち時間' : TM.title));
+    if (kind === 'rule' && c.p) meta.append(el('span', 'ucard-tag', c.p + '人専用'));
+    meta.append(el('b', 'ucard-title', c.title));
+    a.append(ucardHead(meta, kind, c.id));
+    const usedTerms = new Set();
+    if (c.text) { const p = el('p', 'ucard-text'); termText(p, c.text, usedTerms); a.append(p); }
+    if (c.list.length) {
+      const ul = el('ul', 'ucard-list');
+      c.list.forEach((x) => { const li = el('li'); termText(li, x, usedTerms); ul.append(li); });
+      a.append(ul);
+    }
+    if (c.need) a.append(el('p', 'ucard-need', '用意するもの: ' + c.need));
+    return a;
+  }
+  // 見出しの行: 左に小さい情報、右上に「やめる」（kind が無い見出しには付けない）
+  function ucardHead(meta, kind, id) {
+    const head = el('div', 'ucard-head');
+    head.append(meta);
+    if (kind) {
+      const stop = button('ucard-stop', 'やめる', 'used-stop-' + kind + (kind === 'sec' ? '' : '-' + id));
+      stop.dataset.stop = kind;
+      stop.dataset.id = String(id);
+      head.append(stop);
+    }
+    return head;
+  }
+  function renderUsed() {
+    closeTip();
+    const grid = $('used-grid');
+    grid.textContent = '';
+    usedRules().forEach((r) => grid.append(ucard('rule', r)));
+    if (used.timer) {
+      if (used.timer.kind === 'card') grid.append(ucard('timer', T.byId.get(used.timer.id)));
+      else {
+        const a = el('article', 'ucard');
+        const meta = el('div', 'ucard-meta');
+        meta.append(el('span', 'ucard-tag', '持ち時間'), el('b', 'ucard-title', R.title));
+        const sec = el('p', 'ucard-sec');
+        sec.append(String(used.timer.value), el('small', null, R.unit));
+        a.append(ucardHead(meta, 'sec', used.timer.value), sec);
+        grid.append(a);
+      }
+    }
+    const f = fmtNow();
+    if (f) {
+      const a = el('article', 'ucard');
+      const meta = el('div', 'ucard-meta');
+      meta.append(el('span', 'ucard-tag', TM.title), el('b', 'ucard-title', f.name), el('span', 'ucard-tag', used.team.length ? '使用中のカード ' + used.team.length + '枚' : '基本の決まりだけ'));
+      a.append(ucardHead(meta, null, null));
+      grid.append(a);
+      usedTeam().forEach((c) => grid.append(ucard('team', c)));
+    }
+    $('used-empty').hidden = anyUsed();
+    if (!$('panel-used').hidden) fitUsed();
+  }
+  // タブの列を上に貼りつけたとき、カードがスクロールせずに収まるように本文の大きさを決める（16〜26px）
+  const USED_FS_MIN = 16;
+  const USED_FS_MAX = 26;
+  const USED_COLS = [300, 250, 210];   // 列の最小の幅。16px でも入りきらないときは、列が増える幅で試す
+  // タブの列: 貼りついたときの上の位置・高さ・貼りつく前の文書の中の位置
+  function barGeom() {
+    const bar = $('tabbar');
+    const cs = getComputedStyle(bar);
+    const top = parseFloat(cs.top) || 0;
+    const h = bar.getBoundingClientRect().height;
+    const docTop = $('masthead').getBoundingClientRect().bottom + window.scrollY + (parseFloat(cs.marginTop) || 0);
+    return { top, h, docTop };
+  }
+  function usedRoom() {
+    const g = barGeom();
+    const gap = $('used-grid').getBoundingClientRect().top + window.scrollY - (g.docTop + g.h);
+    return window.innerHeight - g.top - g.h - gap - 4;
+  }
+  function fitUsed() {
+    const grid = $('used-grid');
+    if ($('panel-used').hidden || !grid.childElementCount) return;
+    const room = usedRoom();
+    const height = () => grid.getBoundingClientRect().height;
+    const setFs = (fs) => grid.style.setProperty('--used-fs', fs + 'px');
+    const fits = (fs) => { setFs(fs); return height() <= room; };
+    const colCount = () => getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length;
+    let lastCols = 0;
+    let best = null;
+    for (const w of USED_COLS) {
+      grid.style.setProperty('--used-col', w + 'px');
+      const n = colCount();
+      if (n === lastCols) continue;   // 列が増えない幅は試さない
+      lastCols = n;
+      if (fits(USED_FS_MAX)) return;
+      if (fits(USED_FS_MIN)) {
+        let lo = USED_FS_MIN;
+        let hi = USED_FS_MAX;
+        while (hi - lo > 0.25) {
+          const mid = (lo + hi) / 2;
+          if (fits(mid)) lo = mid; else hi = mid;
+        }
+        setFs(lo);
+        return;
+      }
+      const h = height();
+      if (!best || h < best.h) best = { w, h };
+    }
+    // どの列の数でも入りきらない: いちばん低くなる並べ方で、いちばん小さい文字（少しスクロールする）
+    grid.style.setProperty('--used-col', best.w + 'px');
+    setFs(USED_FS_MIN);
+  }
+  // 使用中のタブを開いたら、名前の帯を上に送って、タブの列のすぐ下からカードを並べる
+  let usedTopY = -1;
+  function usedMinHeight() {
+    const g = barGeom();
+    const cs = getComputedStyle($('tabbar'));
+    $('panel-used').style.minHeight = Math.max(0, window.innerHeight - g.top - g.h - (parseFloat(cs.marginBottom) || 0)) + 'px';
+    return g;
+  }
+  function showUsedTop() {
+    const g = usedMinHeight();
+    usedTopY = Math.max(0, Math.round(g.docTop - g.top));
+    window.scrollTo(0, usedTopY);
+  }
+  function refitUsed() {
+    if ($('panel-used').hidden) return;
+    const atTop = usedTopY >= 0 && Math.abs(window.scrollY - usedTopY) <= 2;
+    usedMinHeight();
+    fitUsed();
+    if (atTop) showUsedTop();   // 開いたままの位置なら、名前の帯の高さが変わっても合わせ直す
+  }
+  $('used-grid').addEventListener('click', (ev) => {
+    const b = ev.target.closest('button[data-stop]');
+    if (!b) return;
+    const kind = b.dataset.stop;
+    unuse(kind, Number(b.dataset.id));
+    usedMsg('使用をやめたよ');
+  });
+  window.addEventListener('resize', () => requestAnimationFrame(refitUsed));
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(refitUsed);
 
   // ---------- チーム戦 ----------
   const teamItems = new Map();   // id → { c, card, btn, msg }
@@ -2630,11 +3071,21 @@ a { color: inherit; }
       const bad = handRules().filter((r) => r.x.includes('team'));
       if (bad.length) {
         hand.ids = hand.ids.filter((rid) => !bad.some((r) => r.id === rid));
-        const t = TM.title + 'にしたので、いまのルールから' + bad.map((r) => noStr(r.id) + '「' + r.title + '」').join('、') + 'を外したよ';
+        const t = TM.title + 'にしたので、引いたカードから' + bad.map((r) => noStr(r.id) + '「' + r.title + '」').join('、') + 'を外したよ';
         setNotice(t);
         notes.push(t);
         renderHand();
         afterHandChange();
+      }
+      const badU = usedRules().filter((r) => r.x.includes('team'));
+      if (badU.length) {
+        used.rules = used.rules.filter((rid) => !badU.some((r) => r.id === rid));
+        notes.push(TM.title + 'にしたので、使用中のルールから' + badU.map((r) => noStr(r.id) + '「' + r.title + '」').join('、') + 'をやめたよ');
+      }
+      const dropU = usedTeam().filter((c) => !teamUsable(c));
+      if (dropU.length) {
+        used.team = used.team.filter((cid) => !dropU.some((c) => c.id === cid));
+        notes.push('使用中の' + f.name + 'では使えないカード（' + dropU.map((c) => c.noLabel).join('・') + '）をやめたよ');
       }
     } else {
       if (mstate.prevPlayers && PLAYERS.includes(mstate.prevPlayers) && settings.players !== mstate.prevPlayers) {
@@ -2642,10 +3093,17 @@ a { color: inherit; }
         notes.push('ガチャの人数を' + settings.players + '人に戻したよ');
       }
       mstate.prevPlayers = 0;
+      if (used.team.length) {
+        used.team = [];
+        notes.push('使用中の' + TM.title + 'のカードもやめたよ');
+      }
     }
     save();
     renderSettings();
     renderTeam();
+    renderUsed();
+    refreshUsedMarks();
+    updateCopyButtons();
     teamFmtNotice(notes.join('。'));
   }
   function toggleTeamLv(lv) {
@@ -2687,35 +3145,18 @@ a { color: inherit; }
     cards.forEach((c, i) => {
       const slot = el('div', 'slot');
       const { card, body } = buildCard(c, false);
-      const actions = el('div', 'card-actions');
-      const rb = button('btn btn-line', '引き直す', 'team-reroll-' + (i + 1));
-      rb.dataset.act = 'reroll';
-      rb.dataset.idx = String(i);
-      const xb = button('btn btn-quiet', '外す', 'team-remove-' + (i + 1));
-      xb.dataset.act = 'remove';
-      xb.dataset.idx = String(i);
-      actions.append(rb, xb);
-      const msg = el('p', 'card-msg');
-      msg.id = 'team-msg-' + (i + 1);
-      msg.setAttribute('role', 'status');
-      msg.hidden = true;
-      body.append(actions, msg);
+      body.append(cardActions('team', 'team', c.id, i), cardMsg('team-msg-' + (i + 1)));
       slot.append(card);
       if (animate && (opts.deal === 'all' || opts.deal === i)) deal(slot, card, base + (opts.deal === 'all' ? i * 160 : 0));
       box.append(slot);
     });
+    refreshUsedMarks();
     if (opts.focus) {
       const target = cards.length ? $('team-' + opts.focus.act + '-' + (Math.min(opts.focus.idx, cards.length - 1) + 1)) : $('team-spin');
       if (target) { try { target.focus({ preventScroll: true }); } catch (e) { target.focus(); } }
     }
   }
-  function refreshTeamMarks() {
-    teamItems.forEach((it) => {
-      const inHand = mstate.hand.includes(it.c.id);
-      it.btn.textContent = inHand ? '入ってる' : '入れる';
-      it.btn.classList.toggle('is-in', inHand);
-    });
-  }
+  function refreshTeamMarks() { refreshUsedMarks(); }
   function layoutTeamList() {
     if (!TM || $('panel-team').hidden || !fmtNow()) return;
     closeTip();
@@ -2788,28 +3229,14 @@ a { color: inherit; }
     renderTeamHand({ focus: { idx, act: 'remove' } });
     refreshTeamMarks();
   }
-  function addTeamFromList(it) {
-    const c = it.c;
-    if (mstate.hand.includes(c.id)) { say(it.msg, 'もう いまの' + TM.title + 'のカードに入ってるよ', 'info'); return; }
-    const bad = teamHand().filter((h) => clash(h, c));
-    if (bad.length) {
-      say(it.msg, bad.map((b) => b.noLabel + '「' + b.title + '」').join('、') + 'といっしょには使えないよ', 'warn');
-      return;
-    }
-    mstate.hand.push(c.id);
-    pushTeamHist([c.id]);
-    save();
-    teamNotice('');
-    renderTeamHand();
-    refreshTeamMarks();
-    say(it.msg, 'いまの' + TM.title + 'のカードに入れたよ（' + mstate.hand.length + '枚目）', 'ok');
-  }
   function buildTeam() {
     if (!TM) return;
     $('tab-team').hidden = false;
-    $('tab-team').textContent = TM.title;
+    $('tab-team-long').textContent = TM.title;
+    $('tab-team-short').textContent = TM.title.length <= 3 ? TM.title : 'チーム';
     $('step-team').hidden = false;
     $('step-team-name').textContent = TM.title;
+    $('step-team-short').textContent = $('tab-team-short').textContent;
     $('team-title').textContent = TM.title;
     $('team-howto').textContent = TM.howto;
     $('team-howto').hidden = !TM.howto;
@@ -2853,8 +3280,10 @@ a { color: inherit; }
     TM.cards.forEach((c) => {
       const { card, body } = buildCard(c, true);
       const actions = el('div', 'card-actions');
-      const b = button('btn btn-line', '入れる', 'team-add-' + c.id);
+      const b = button('btn btn-use', '使用する', 'use-team-' + c.id);
       b.dataset.id = String(c.id);
+      b.dataset.use = 'team';
+      b.setAttribute('aria-pressed', 'false');
       actions.append(b);
       const msg = el('p', 'card-msg');
       msg.setAttribute('role', 'status');
@@ -2867,14 +3296,15 @@ a { color: inherit; }
       const b = ev.target.closest('button[data-act]');
       if (!b) return;
       const i = Number(b.dataset.idx);
-      if (b.dataset.act === 'reroll') rerollTeam(i);
+      if (b.dataset.act === 'use') toggleUse('team', Number(b.dataset.id), $('team-msg-' + (i + 1)));
+      else if (b.dataset.act === 'reroll') rerollTeam(i);
       else removeTeam(i);
     });
     $('team-grid').addEventListener('click', (ev) => {
       const b = ev.target.closest('button[data-id]');
       if (!b) return;
       const it = teamItems.get(Number(b.dataset.id));
-      if (it) addTeamFromList(it);
+      if (it) toggleUse('team', it.c.id, it.msg);
     });
   }
 
@@ -2977,7 +3407,11 @@ a { color: inherit; }
     if (name === 'team') layoutTeamList();
     closeTip();
     if (!opts.keepHash) { try { window.history.replaceState(null, '', '#' + name); } catch (e) { /* 書けなくてもいい */ } }
-    if (changed && !opts.keepScroll) {
+    if (name === 'used') {
+      renderUsed();
+      showUsedTop();
+      fitUsed();
+    } else if (changed && !opts.keepScroll) {
       const y = $('masthead').getBoundingClientRect().bottom + window.scrollY;
       if (window.scrollY > y) window.scrollTo(0, y);
     }
@@ -3024,7 +3458,7 @@ a { color: inherit; }
   buildTimer();
   buildTeam();
   if (TABS.length > 3) $('tabs').classList.add('tabs--' + TABS.length);
-  if (TABS.length === 5) document.body.classList.add('five-tabs');   // スマホでは「ぜんぶ見る」を「一覧」と書く
+  if (TABS.length >= 5) document.body.classList.add('many-tabs');   // スマホでは短い名前（チーム・時間・一覧）
   if (firstRun) {
     spin();   // 初めては ★1〜★2 から2枚（初期の条件のまま）
     setNotice('例として' + hand.ids.length + '枚引いてあるよ。条件を選んで「ガチャを回す」を押してみよう');
@@ -3037,12 +3471,20 @@ a { color: inherit; }
   refreshListMarks();
   if (T) {
     renderTimerSettings();
-    renderTimerNow();
-    refreshTimerMarks();
+    renderTimerHand();
+    renderRoulette();
   }
   if (TM) renderTeam();
+  renderUsed();
+  refreshUsedMarks();
   const fromHash = location.hash.slice(1);
   showTab(TABS.includes(fromHash) ? fromHash : tab, { keepHash: true, keepScroll: true });
+  // 使用中のタブで開いたときは、読み込みのあと（ブラウザが前のスクロールの位置に戻したあと）にも、名前の帯を上に送る
+  if (tab === 'used') {
+    window.addEventListener('load', () => setTimeout(() => {
+      if (!$('panel-used').hidden && usedTopY >= 0 && window.scrollY < usedTopY - 2) showUsedTop();
+    }, 0), { once: true });
+  }
 })();
 </script>
 
