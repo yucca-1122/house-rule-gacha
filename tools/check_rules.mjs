@@ -71,8 +71,33 @@ for (const dir of dirs) {
     else {
       const C = TM.cards;
       const tno = (c) => 'T' + String(c.id).padStart(2, '0');
-      for (const k of Object.keys(TM)) if (!['title', 'base', 'howto', 'startLv', 'cards'].includes(k)) problems.push(`timer の知らない項目: ${k}`);
+      for (const k of Object.keys(TM)) if (!['title', 'base', 'howto', 'startLv', 'roulette', 'cards'].includes(k)) problems.push(`timer の知らない項目: ${k}`);
       if (!TM.title) problems.push('timer.title が無い');
+      // 秒数ルーレット（任意）: from < to・(to − from) が step で割り切れる・unit がある。出る数は 2〜100 通り
+      let roulLine = '';
+      if (TM.roulette !== undefined) {
+        const RO = TM.roulette;
+        if (!RO || typeof RO !== 'object' || Array.isArray(RO)) problems.push('timer.roulette がオブジェクトでない');
+        else {
+          for (const k of Object.keys(RO)) if (!['title', 'from', 'to', 'step', 'unit', 'howto'].includes(k)) problems.push(`timer.roulette の知らない項目: ${k}`);
+          const { from, to, step } = RO;
+          const nums = [from, to, step].every((v) => typeof v === 'number' && Number.isFinite(v));
+          if (!nums) problems.push('timer.roulette の from・to・step は数で書く');
+          else {
+            const k = (to - from) / step;
+            if (!(step > 0)) problems.push('timer.roulette.step は 0 より大きく');
+            else if (!(from < to)) problems.push(`timer.roulette は from < to にする（いまは ${from} と ${to}）`);
+            else if (Math.abs(k - Math.round(k)) > 1e-9) problems.push(`timer.roulette の (to − from) が step で割り切れない（${to} − ${from} を ${step} きざみ）`);
+            else if (Math.round(k) + 1 > 100) problems.push(`timer.roulette の出る数が多すぎる（${Math.round(k) + 1}通り。100通りまで）`);
+            else roulLine = ` / 秒数ルーレット: ${from}〜${to}${RO.unit || ''}（${step}${RO.unit || ''}きざみ・${Math.round(k) + 1}通り）`;
+          }
+          if (typeof RO.unit !== 'string' || !RO.unit.trim()) problems.push('timer.roulette.unit が無い（例: 秒）');
+          if (RO.title !== undefined && (typeof RO.title !== 'string' || !RO.title.trim())) problems.push('timer.roulette.title が空');
+          const all = [RO.title || '', RO.unit || '', RO.howto || ''].join(' ');
+          if (/["']/.test(all)) problems.push('timer.roulette に半角の引用符がある');
+          if (/～/.test(all)) problems.push('timer.roulette に全角チルダ（～）がある。〜にそろえる');
+        }
+      }
       if (!TM.base) problems.push('timer.base が無い（まだ引いていないときに出す、ふだんの持ち時間）');
       if (TM.startLv !== undefined && (!Array.isArray(TM.startLv) || !TM.startLv.length || TM.startLv.some((v) => ![1, 2, 3, 4, 5].includes(v)))) problems.push('timer.startLv が変');
       C.forEach((c, i) => { if (c.id !== i + 1) problems.push(`持ち時間の id の並び: index ${i} が id ${c.id}`); });
@@ -91,7 +116,7 @@ for (const dir of dirs) {
       for (let i = 1; i < C.length; i++) if (C[i].lv < C[i - 1].lv) problems.push(`持ち時間の lv の並びが逆: ${tno(C[i])}`);
       const byLvT = {};
       for (const c of C) byLvT[c.lv] = (byLvT[c.lv] || 0) + 1;
-      timerLine = `${C.length}枚 / 難易度別: ${JSON.stringify(byLvT)} / need あり: ${C.filter((c) => c.need).length}枚`;
+      timerLine = `${C.length}枚 / 難易度別: ${JSON.stringify(byLvT)} / need あり: ${C.filter((c) => c.need).length}枚${roulLine}`;
     }
   }
 

@@ -70,7 +70,8 @@ for (const dir of dirs) {
   write(path.join(ROOT, 'dist', 'artifact', g.folder + '.html'), embedPage);
   const byLv = [1, 2, 3, 4, 5].map((lv) => rules.filter((r) => r.lv === lv).length);
   const tm = g.data.timer && typeof g.data.timer === 'object' && Array.isArray(g.data.timer.cards) && g.data.timer.cards.length ? g.data.timer : null;
-  const timer = tm ? { title: tm.title || '持ち時間ガチャ', count: tm.cards.length } : null;
+  const roul = tm && tm.roulette && typeof tm.roulette === 'object' ? String(tm.roulette.title || '秒数ルーレット') : '';
+  const timer = tm ? { title: tm.title || '持ち時間ガチャ', count: tm.cards.length, roulette: roul } : null;
   const tmd = g.data.team && typeof g.data.team === 'object' && Array.isArray(g.data.team.cards) && g.data.team.cards.length ? g.data.team : null;
   const team = tmd ? { title: tmd.title || 'チーム戦', count: tmd.cards.length } : null;
   games.push({ id: g.folder, title: meta.title, subtitle: meta.subtitle || '', updated: meta.updated || '', count: rules.length, byLv, team, timer, order: Number(meta.order) || 0 });
@@ -99,7 +100,7 @@ const card = (g) => {
           <span class="mix" role="img" aria-label="${esc(mixLabel)}">${mix}</span>
           <span class="game-meta"><span><b>${g.count}</b>件</span>${g.updated ? `<span>更新 ${esc(g.updated)}</span>` : ''}</span>
           ${g.team ? `<span class="game-timer game-team"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="16.6" cy="9.2" r="2.6" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M2.8 19.5c.6-3.4 3-5.3 5.7-5.3s5.1 1.9 5.7 5.3M14.4 14.5c.7-.3 1.4-.4 2.2-.4 2.3 0 4.2 1.6 4.7 4.6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>${esc(g.team.title)} <b>${g.team.count}</b>種</span>` : ''}
-          ${g.timer ? `<span class="game-timer"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7.8" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 13.5V9.4M9.6 2.6h4.8M12 2.6v3.1M18.3 6.9l1.5-1.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>${esc(g.timer.title)} <b>${g.timer.count}</b>種</span>` : ''}
+          ${g.timer ? `<span class="game-timer"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7.8" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 13.5V9.4M9.6 2.6h4.8M12 2.6v3.1M18.3 6.9l1.5-1.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>${esc(g.timer.title)} <b>${g.timer.count}</b>種${g.timer.roulette ? ' ＋ ' + esc(g.timer.roulette) : ''}</span>` : ''}
           <span class="game-go">開く</span>
         </a>
       </li>`;
