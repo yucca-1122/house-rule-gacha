@@ -140,7 +140,8 @@ for (const dir of dirs) {
     }
   }
 
-  // チーム戦（team）: formats（id の重複・players・base）と cards（id の通し番号・★の並び・必須・fmt・知らない項目・文字種）
+  // チーム戦（team）: formats（id の重複・players・base）と cards（id の通し番号・必須・fmt・知らない項目・文字種）
+  // ★の並びは見ない（あとから足したカードは、番号を変えないように末尾に足す。画面では★の順に並べ直す）
   let teamLine = 'なし';
   if (D.team !== undefined) {
     const TM = D.team;
@@ -179,7 +180,6 @@ for (const dir of dirs) {
         if (/["']/.test(all)) problems.push(`${cno(c)} 半角の引用符がある`);
         if (/～/.test(all)) problems.push(`${cno(c)} 全角チルダ（～）がある。〜にそろえる`);
       }
-      for (let i = 1; i < C.length; i++) if (C[i].lv < C[i - 1].lv) problems.push(`チーム戦の lv の並びが逆: ${cno(C[i])}`);
       const byLvC = {};
       for (const c of C) byLvC[c.lv] = (byLvC[c.lv] || 0) + 1;
       const perFmt = TM.formats.map((f) => `${f.id}=${C.filter((c) => !c.fmt || c.fmt.includes(f.id)).length}`).join('・');
