@@ -2,6 +2,9 @@
 // 使い方: node tools/check_rules.mjs games/catan   （引数なしなら games/ の全部）
 import { gameDirsFromArgs, loadGame, conflicts, rel } from './lib.mjs';
 
+// list の「・」で始まる行は、1つ上の行の中の項目（画面では一段下げる）。だから最初の行には使えない
+const subFirst = (list) => typeof list[0] === 'string' && list[0].trim().startsWith('・');
+
 const dirs = gameDirsFromArgs(process.argv.slice(2));
 if (!dirs.length) { console.log('検査するゲームが無い（games/<id>/rules.js）'); process.exit(1); }
 let failedGames = 0;
@@ -61,6 +64,7 @@ for (const dir of dirs) {
     const all = [r.title, r.text, r.note || '', r.need || '', ...(r.list || [])].join(' ');
     if (/["']/.test(all)) problems.push(`No.${r.id} 半角の引用符がある`);
     if (/～/.test(all)) problems.push(`No.${r.id} 全角チルダ（～）がある。〜にそろえる`);
+    if (Array.isArray(r.list) && subFirst(r.list)) problems.push(`No.${r.id} list の最初の行が「・」で始まっている（「・」の行は1つ上の行の中の項目）`);
   }
 
   // 持ち時間（timer）: ルールとは別の番号（T01〜）。id の通し番号・★の並び・必須項目・タイトルの重複・文字種
@@ -159,12 +163,18 @@ for (const dir of dirs) {
         if (!Number.isInteger(f.players) || f.players < 1) problems.push(`形 ${f.id} の players が変: ${f.players}`);
         else if (choices.length && !choices.includes(f.players)) problems.push(`形 ${f.id} の players（${f.players}）が meta.players の選択肢に無い`);
         if (!Array.isArray(f.base) || !f.base.length || f.base.some((b) => typeof b !== 'string' || !b)) problems.push(`形 ${f.id} の base が無い・空の行がある`);
-        for (const k of Object.keys(f)) if (!['id', 'name', 'players', 'base'].includes(k)) problems.push(`形 ${f.id} の知らない項目: ${k}`);
+        else if (f.base.some((b) => /["']/.test(b) || /～/.test(b))) problems.push(`形 ${f.id} の base に半角の引用符か「～」がある`);
+        // own: true … この形では、fmt にこの形を書いたカードだけを使う（fmt の無いカードは使わない）
+        // pick … この形で一度に引く・使うカードの枚数（1〜3）。書けば枚数を選ぶ欄は出ない
+        if (f.own !== undefined && typeof f.own !== 'boolean') problems.push(`形 ${f.id} の own が true / false でない`);
+        if (f.pick !== undefined && ![1, 2, 3].includes(f.pick)) problems.push(`形 ${f.id} の pick は 1〜3 の整数にする（いまは ${f.pick}）`);
+        for (const k of Object.keys(f)) if (!['id', 'name', 'players', 'base', 'own', 'pick'].includes(k)) problems.push(`形 ${f.id} の知らない項目: ${k}`);
       }
+      const ownIds = new Set(TM.formats.filter((f) => f && f.own === true).map((f) => f.id));
       const C = TM.cards;
       const cno = (c) => 'C' + String(c.id).padStart(2, '0');
       C.forEach((c, i) => { if (c.id !== i + 1) problems.push(`チーム戦の id の並び: index ${i} が id ${c.id}`); });
-      const knownC = new Set(['id', 'lv', 'title', 'text', 'list', 'note', 'need', 'fmt', 'x']);
+      const knownC = new Set(['id', 'lv', 'title', 'text', 'list', 'note', 'need', 'fmt', 'x', 'more']);
       const seenC = new Map();
       const xC = new Map();
       for (const c of C) {
@@ -176,15 +186,33 @@ for (const dir of dirs) {
         for (const k of c.x || []) xC.set(k, (xC.get(k) || 0) + 1);
         if (seenC.has(c.title)) problems.push(`チーム戦のタイトル重複: ${c.title}（${seenC.get(c.title)} と ${cno(c)}）`);
         seenC.set(c.title, cno(c));
-        const all = [c.title, c.text, c.note || '', c.need || '', ...(c.list || [])].join(' ');
+        // more（「くわしく」で開く見出しつきの箇条書き）: [{ h: '見出し', list: ['…'] }]
+        const moreText = [];
+        if (c.more !== undefined) {
+          if (!Array.isArray(c.more) || !c.more.length) problems.push(`${cno(c)} more が配列でない・空`);
+          else c.more.forEach((m, j) => {
+            if (!m || typeof m !== 'object' || Array.isArray(m)) { problems.push(`${cno(c)} more の ${j + 1} つ目がオブジェクトでない`); return; }
+            for (const k of Object.keys(m)) if (!['h', 'list'].includes(k)) problems.push(`${cno(c)} more の ${j + 1} つ目の知らない項目: ${k}`);
+            if (typeof m.h !== 'string' || !m.h.trim()) problems.push(`${cno(c)} more の ${j + 1} つ目の h（見出し）が無い`);
+            if (!Array.isArray(m.list) || !m.list.length || m.list.some((s) => typeof s !== 'string' || !s.trim())) problems.push(`${cno(c)} more「${m.h}」の list が無い・空の行がある`);
+            else if (subFirst(m.list)) problems.push(`${cno(c)} more「${m.h}」の list の最初の行が「・」で始まっている`);
+            moreText.push(m.h || '', ...(Array.isArray(m.list) ? m.list : []));
+          });
+        }
+        if (Array.isArray(c.list) && subFirst(c.list)) problems.push(`${cno(c)} list の最初の行が「・」で始まっている（「・」の行は1つ上の行の中の項目）`);
+        if ((c.fmt || []).some((f) => ownIds.has(f)) && (c.fmt || []).some((f) => !ownIds.has(f))) problems.push(`${cno(c)} own の形とほかの形を一緒に fmt に書いている（own の形のカードは、その形だけにする）`);
+        const all = [c.title, c.text, c.note || '', c.need || '', ...(c.list || []), ...moreText].join(' ');
         if (/["']/.test(all)) problems.push(`${cno(c)} 半角の引用符がある`);
         if (/～/.test(all)) problems.push(`${cno(c)} 全角チルダ（～）がある。〜にそろえる`);
       }
       const byLvC = {};
       for (const c of C) byLvC[c.lv] = (byLvC[c.lv] || 0) + 1;
-      const perFmt = TM.formats.map((f) => `${f.id}=${C.filter((c) => !c.fmt || c.fmt.includes(f.id)).length}`).join('・');
+      // own の形は fmt にその形を書いたカードだけ、ほかの形は fmt の無いカードと fmt にその形を書いたカード
+      const inFmt = (c, f) => (f.own === true ? (c.fmt || []).includes(f.id) : !c.fmt || c.fmt.includes(f.id));
+      for (const f of TM.formats) if (f && f.own === true && !C.some((c) => inFmt(c, f))) problems.push(`形 ${f.id} は own なのに、fmt に ${f.id} を書いたカードが無い`);
+      const perFmt = TM.formats.map((f) => `${f.id}=${C.filter((c) => inFmt(c, f)).length}`).join('・');
       const lonelyC = [...xC].filter(([, n]) => n === 1).map(([k]) => k);
-      teamLine = `${TM.formats.length}形 / ${C.length}枚 / 難易度別: ${JSON.stringify(byLvC)} / 形ごと: ${perFmt} / x のグループ（1枚しかないもの）: ${lonelyC.join(', ') || 'なし'}`;
+      teamLine = `${TM.formats.length}形 / ${C.length}枚 / 難易度別: ${JSON.stringify(byLvC)} / 形ごと: ${perFmt} / くわしくあり: ${C.filter((c) => Array.isArray(c.more) && c.more.length).length}枚 / x のグループ（1枚しかないもの）: ${lonelyC.join(', ') || 'なし'}`;
     }
   }
 
