@@ -651,6 +651,31 @@ a { color: inherit; }
 .card-need b { font-weight: 700; }
 .card-note { margin: 0; padding-top: 9px; border-top: 1px dashed var(--line); font-size: 13.5px; line-height: 1.7; color: var(--ink-dim); }
 .card-note b { color: var(--ink); margin-right: .6em; }
+/* 箇条書きの「・」で始まる行（1つ上の行の中の項目）は一段下げる */
+.card-list li.is-sub { margin-left: 17px; }
+.card-list li.is-sub::before { opacity: .45; }
+/* くわしく（カードの more）: 押すと開く、見出しつきの箇条書き */
+.card-more { border-top: 1px dashed var(--line); padding-top: 9px; }
+.card-more > summary {
+  list-style: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--link);
+  user-select: none;
+  -webkit-user-select: none;
+}
+.card-more > summary::-webkit-details-marker { display: none; }
+.card-more > summary::after { content: ""; width: 6px; height: 6px; margin-top: -3px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); transition: transform .2s ease; }
+.card-more[open] > summary::after { margin-top: 3px; transform: rotate(-135deg); }
+.card-more > summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+.card-more-body { display: grid; gap: 12px; padding-top: 10px; }
+.card-more-h { margin: 0 0 5px; font-size: 13.5px; font-weight: 700; line-height: 1.5; }
+.card-more .card-list { font-size: 13.5px; }
 .card-actions { margin-top: auto; padding-top: 4px; display: flex; flex-wrap: wrap; gap: 8px; }
 .card-msg { margin: 0; font-size: 13px; font-weight: 700; line-height: 1.5; color: var(--warn); }
 .card-msg[data-tone="ok"] { color: var(--link); }
@@ -663,6 +688,7 @@ a { color: inherit; }
 .card--mini .card-title { font-size: 16.5px; }
 .card--mini .card-text { font-size: 14px; line-height: 1.75; }
 .card--mini .card-list, .card--mini .card-need, .card--mini .card-note { font-size: 13px; }
+.card--mini .card-more > summary, .card--mini .card-more-h, .card--mini .card-more .card-list { font-size: 13px; }
 
 /* カードの裏と、めくれる演出（ここだけ動く） */
 .card-back {
@@ -806,6 +832,8 @@ a { color: inherit; }
 .ucard-list { margin: 0; padding: 0; list-style: none; display: grid; font-size: var(--used-fs); line-height: 1.4; }
 .ucard-list li { position: relative; padding-left: .85em; }
 .ucard-list li::before { content: ""; position: absolute; left: 0; top: .55em; width: .42em; height: .48em; clip-path: var(--hex); background: var(--ore); }
+.ucard-list li.is-sub { margin-left: .85em; }
+.ucard-list li.is-sub::before { opacity: .45; }
 .ucard-need { margin: 0; font-size: 11.5px; line-height: 1.3; color: var(--ink-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ucard-sec { margin: 0; font-family: var(--font-display); font-size: calc(var(--used-fs) * 2.2); line-height: 1.1; font-variant-numeric: tabular-nums; }
 .ucard-sec small { font-size: .45em; margin-left: 2px; }
@@ -971,7 +999,7 @@ a { color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   .slot.is-dealing > .card, .slot.is-dealing > .card-back { animation: none; }
   .slot > .card-back { display: none; }
-  .spin, .switch-track, .switch-knob, .fold-chev { transition: none; }
+  .spin, .switch-track, .switch-knob, .fold-chev, .card-more > summary::after { transition: none; }
 }
 </style>
 
@@ -1120,7 +1148,7 @@ a { color: inherit; }
               <p class="field-label" id="team-lv-label">難易度</p>
               <div class="lv-row" id="team-lv-row" role="group" aria-labelledby="team-lv-label"></div>
             </div>
-            <div class="field">
+            <div class="field" id="team-count-field">
               <p class="field-label" id="team-count-label">枚数</p>
               <div class="seg" id="team-count-seg" role="radiogroup" aria-labelledby="team-count-label"></div>
             </div>
@@ -1150,8 +1178,8 @@ a { color: inherit; }
           <p class="notice" id="team-notice" role="status" aria-live="polite" hidden></p>
           <div class="hand" id="team-hand"></div>
           <div class="hand-empty" id="team-empty" hidden>
-            <p><b>基本の決まりだけで遊べるよ。</b></p>
-            <p>決まりを足したいときは「チーム戦のカードを引く」。下の一覧からも、そのまま使用できるよ。</p>
+            <p><b id="team-empty-lead">基本の決まりだけで遊べるよ。</b></p>
+            <p id="team-empty-sub">決まりを足したいときは「チーム戦のカードを引く」。下の一覧からも、そのまま使用できるよ。</p>
           </div>
         </div>
 
@@ -1274,7 +1302,7 @@ a { color: inherit; }
                 <li><span>難易度・枚数<span id="step-players">・人数</span>を選んで、<b>「ガチャを回す」</b>を押す。</span></li>
                 <li><span>気に入らないカードは<b>「引き直す」</b>、使わないカードは<b>「外す」</b>。</span></li>
                 <li><span>使うカードが決まったら<b>「使用する」</b>。「使用中」タブに、使うカードだけが大きく並ぶ（ルールは5枚まで・持ち時間は1つ）。好きなルールは「<span class="tab-long">ぜんぶ見る</span><span class="tab-short">一覧</span>」から、そのまま使用できるよ。</span></li>
-                <li id="step-team" hidden><span>チーム戦にするなら、「<span class="tab-long" id="step-team-name">チーム戦</span><span class="tab-short" id="step-team-short">チーム</span>」タブで<b>チームの形</b>を選ぶ。基本の決まりが出て、チーム戦のカードも引ける（使用できるのは3枚まで）。</span></li>
+                <li id="step-team" hidden><span>チーム戦にするなら、「<span class="tab-long" id="step-team-name">チーム戦</span><span class="tab-short" id="step-team-short">チーム</span>」タブで<b>チームの形</b>を選ぶ。基本の決まりが出て、チーム戦のカードも引ける（使用できるのは3枚まで。形によっては1枚だけ）。</span></li>
                 <li id="step-timer" hidden><span>持ち時間も変えるなら、「<span class="tab-long">持ち時間</span><span class="tab-short">時間</span>」タブで<b>「<span id="step-timer-name">持ち時間ガチャ</span>を回す」</b><span id="step-roul" hidden>か<b>「<span id="step-roul-name">秒数ルーレット</span>」</b></span>。使用できる持ち時間は1つだけで、新しく「使用する」と入れ替わる。</span></li>
                 <li><span>決まったら<b>「テキストでコピー」</b>で LINE に貼って、みんなで読もう。使用中のカードがあれば、それをコピーするよ。</span></li>
                 <li><span>遊んでいる間は「使用中」タブで<b>「画面をつけたままにする」</b>をオンにして、机に置いておこう。途中でルールを増やすときは「1枚足す」で引いて「使用する」。</span></li>
@@ -1430,11 +1458,14 @@ a { color: inherit; }
       const id = str(f.id);
       if (!id || fmtById.has(id)) return;
       const n = Number(f.players);
-      const o = { id, name: str(f.name) || id, players: Number.isInteger(n) && n > 0 ? n : 0, base: strList(f.base) };
+      const pk = Number(f.pick);
+      // own: この形では、fmt にこの形を書いたカードだけを使う。pick: この形で一度に引く・使う枚数（1〜3。あれば枚数の欄は出さない）
+      const o = { id, name: str(f.name) || id, players: Number.isInteger(n) && n > 0 ? n : 0, base: strList(f.base), own: f.own === true, pick: [1, 2, 3].includes(pk) ? pk : 0 };
       formats.push(o);
       fmtById.set(id, o);
     });
     if (!formats.length) return null;
+    const openFmts = formats.filter((f) => !f.own);   // 「◯◯だけ」の札は、own でない形の中で数える
     const title = str(t.title) || 'チーム戦';
     let maxId = 0;
     t.cards.forEach((c) => { if (c && Number.isInteger(Number(c.id))) maxId = Math.max(maxId, Number(c.id)); });
@@ -1448,12 +1479,12 @@ a { color: inherit; }
       const raw = strList(c.fmt);
       const fmt = raw.filter((k) => fmtById.has(k));
       if (raw.length && !fmt.length) fmt.push('__none');   // 知らない形だけ書いてあるカードは、どの形でも使わない
-      const names = fmt.filter((k) => fmtById.has(k)).map((k) => fmtById.get(k).name);
+      const names = fmt.filter((k) => fmtById.has(k) && !fmtById.get(k).own).map((k) => fmtById.get(k).name);
       cards.push({
         id, lv: clampLv(c.lv), cat: '', title: str(c.title) || '（名前のないカード）', text: str(c.text), list: strList(c.list),
-        note: str(c.note), need: str(c.need), p: 0, x: strList(c.x), req: [], ban: [], fmt,
+        note: str(c.note), need: str(c.need), p: 0, x: strList(c.x), req: [], ban: [], fmt, more: readMore(c.more),
         noLabel: 'C' + String(id).padStart(2, '0'), tagLabel: title,
-        extraTag: names.length && names.length < formats.length ? names.join('・') + 'だけ' : '',
+        extraTag: names.length && names.length < openFmts.length ? names.join('・') + 'だけ' : '',
       });
     });
     cards.sort((a, b) => a.lv - b.lv || a.id - b.id);   // ★の順（あとから末尾に足したカードも、その★のところに並ぶ）
@@ -1464,6 +1495,15 @@ a { color: inherit; }
       startLv: startLv.length ? startLv : [1, 2, 3],
     };
   }
+  // くわしく（チーム戦のカードの more）: [{ h: 見出し, list: [...] }]。見出しか中身の無いものは使わない
+  function readMore(v) {
+    if (!Array.isArray(v)) return [];
+    return v.map((m) => (m && typeof m === 'object' ? { h: str(m.h), list: strList(m.list) } : null)).filter((m) => m && m.h && m.list.length);
+  }
+  // チーム戦のカードが、その形で使えるか。own の形は fmt にその形を書いたカードだけ、ほかの形は fmt が無いか fmt にその形があるカード
+  function fmtFits(c, f) { return !!f && (f.own ? c.fmt.includes(f.id) : !c.fmt.length || c.fmt.includes(f.id)); }
+  // その形で使用できるチーム戦のカードの枚数
+  function teamUseMax(f) { return f && f.pick ? f.pick : USE_MAX_TEAM; }
   // 言葉の説明（glossary）。tap が true の言葉は、カードの中で点線にして押すと説明を出す
   function readGlossary(g) {
     if (!Array.isArray(g)) return [];
@@ -1714,8 +1754,10 @@ a { color: inherit; }
       if (lv.length) o.lv = lv;
     }
     if ([1, 2, 3].includes(Number(t.n))) o.n = Number(t.n);
-    const okFmt = (c) => !o.fmt || !c.fmt.length || c.fmt.includes(o.fmt);
+    const f = o.fmt ? TM.fmtById.get(o.fmt) : null;
+    const okFmt = (c) => !f || fmtFits(c, f);
     if (Array.isArray(t.hand)) o.hand = [...new Set(t.hand.map(Number).filter((id) => TM.byId.has(id) && okFmt(TM.byId.get(id))))];
+    if (f && f.pick && o.hand.length > f.pick) o.hand.length = f.pick;
     if (Array.isArray(t.hist)) {
       o.hist = t.hist.filter(Array.isArray).map((ids) => ids.map(Number).filter((id) => TM.byId.has(id))).filter((ids) => ids.length).slice(0, TEAM_HISTORY_MAX);
     }
@@ -1742,10 +1784,11 @@ a { color: inherit; }
       else if (ut.kind === 'sec' && T.roulette && T.roulette.values.includes(Number(ut.value))) o.timer = { kind: 'sec', value: Number(ut.value) };
     }
     if (TM && mstate.fmt && Array.isArray(u.team)) {
+      const f = TM.fmtById.get(mstate.fmt);
       u.team.map(Number).forEach((id) => {
         const c = TM.byId.get(id);
-        if (!c || o.team.includes(id) || o.team.length >= USE_MAX_TEAM) return;
-        if (c.fmt.length && !c.fmt.includes(mstate.fmt)) return;
+        if (!c || o.team.includes(id) || o.team.length >= teamUseMax(f)) return;
+        if (!fmtFits(c, f)) return;
         if (o.team.some((x) => clash(TM.byId.get(x), c))) return;
         o.team.push(id);
       });
@@ -1927,11 +1970,7 @@ a { color: inherit; }
       termText(p, r.text, used);
       body.append(p);
     }
-    if (r.list.length) {
-      const ul = el('ul', 'card-list');
-      r.list.forEach((s) => { const li = el('li'); termText(li, s, used); ul.append(li); });
-      body.append(ul);
-    }
+    if (r.list.length) body.append(listEl('card-list', r.list, used));
     if (r.need) {
       const p = el('p', 'card-need');
       p.append(el('b', null, '用意するもの'), document.createTextNode(r.need));
@@ -1943,8 +1982,32 @@ a { color: inherit; }
       termText(p, r.note, used);
       body.append(p);
     }
+    if (r.more && r.more.length) body.append(moreEl(r.more, used));
     card.append(strip, body);
     return { card, body };
+  }
+  // 箇条書き。「・」で始まる行は、1つ上の行の中の項目として一段下げる
+  function listEl(cls, items, used) {
+    const ul = el('ul', cls);
+    items.forEach((s) => {
+      const sub = s.startsWith('・');
+      const li = el('li', sub ? 'is-sub' : null);
+      termText(li, sub ? s.slice(1) : s, used);
+      ul.append(li);
+    });
+    return ul;
+  }
+  // くわしく（more）。押すと開く。中は見出しと箇条書き
+  function moreEl(more, used) {
+    const d = el('details', 'card-more');
+    const body = el('div', 'card-more-body');
+    more.forEach((m) => {
+      const sec = el('div');
+      sec.append(el('p', 'card-more-h', m.h), listEl('card-list', m.list, used));
+      body.append(sec);
+    });
+    d.append(el('summary', null, 'くわしく（' + more.map((m) => m.h.replace(/（.*$/, '')).join('・') + '）'), body);
+    return d;
   }
 
   const msgTimers = new WeakMap();
@@ -2128,11 +2191,12 @@ a { color: inherit; }
     const timers = useMode ? (used.timer ? [used.timer] : []) : timerDrawn().map((c) => ({ kind: 'card', id: c.id }));
     if (!rules.length && !f && !timers.length) return '';
     const out = ['【' + D.copyTitle + '】'];
+    const line = (x) => (x.startsWith('・') ? '　' + x : '・' + x);   // 「・」で始まる行は、1つ上の行の中の項目
     rules.forEach((r, i) => {
       out.push('');
       out.push(circled(i + 1) + ' ' + noStr(r.id) + ' ' + r.title + '（' + lvLabel(r.lv) + '）');
       if (r.text) out.push(r.text);
-      r.list.forEach((x) => out.push('・' + x));
+      r.list.forEach((x) => out.push(line(x)));
       if (r.need) out.push('用意するもの：' + r.need);
       if (r.p) out.push('※' + r.p + '人専用');
     });
@@ -2144,7 +2208,7 @@ a { color: inherit; }
         out.push('');
         out.push(c.noLabel + ' ' + c.title + '（' + lvLabel(c.lv) + '）');
         if (c.text) out.push(c.text);
-        c.list.forEach((x) => out.push('・' + x));
+        c.list.forEach((x) => out.push(line(x)));
         if (c.need) out.push('用意するもの：' + c.need);
       });
     }
@@ -2823,13 +2887,22 @@ a { color: inherit; }
       const c = TM.byId.get(id);
       const f = fmtNow();
       if (!f) { say(msg, TM.title + 'の形を選んでいるときだけ使えるよ', 'warn'); return; }
-      if (c.fmt.length && !c.fmt.includes(f.id)) { say(msg, f.name + 'では使えないカードだよ', 'warn'); return; }
+      if (!fmtFits(c, f)) { say(msg, f.name + 'では使えないカードだよ', 'warn'); return; }
+      const max = teamUseMax(f);
+      // 1枚だけの形は、使用中のカードと入れ替える（持ち時間と同じ）
+      if (max === 1 && used.team.length) {
+        const old = TM.byId.get(used.team[0]);
+        used.team = [id];
+        afterUse();
+        say(msg, (old ? old.noLabel + '「' + old.title + '」から' : '') + '入れ替えたよ（' + f.name + 'は1枚だけ）', 'ok');
+        return;
+      }
       const bad = usedTeam().filter((u) => clash(u, c));
       if (bad.length) { say(msg, '使用中の' + bad.map((x) => x.noLabel + '「' + x.title + '」').join('、') + 'といっしょには使えないよ', 'warn'); return; }
-      if (used.team.length >= USE_MAX_TEAM) { say(msg, '使えるのは' + USE_MAX_TEAM + '枚まで。どれかを使用カードからやめてね', 'warn'); return; }
+      if (used.team.length >= max) { say(msg, '使えるのは' + max + '枚まで。どれかを使用カードからやめてね', 'warn'); return; }
       used.team.push(id);
       afterUse();
-      say(msg, '使用カードに入れたよ（' + TM.title + ' ' + used.team.length + '/' + USE_MAX_TEAM + '）', 'ok');
+      say(msg, max === 1 ? '使用カードに入れたよ（' + f.name + '）' : '使用カードに入れたよ（' + TM.title + ' ' + used.team.length + '/' + max + '）', 'ok');
     }
   }
   function unuse(kind, id) {
@@ -2878,11 +2951,7 @@ a { color: inherit; }
     a.append(ucardHead(meta, kind, c.id));
     const usedTerms = new Set();
     if (c.text) { const p = el('p', 'ucard-text'); termText(p, c.text, usedTerms); a.append(p); }
-    if (c.list.length) {
-      const ul = el('ul', 'ucard-list');
-      c.list.forEach((x) => { const li = el('li'); termText(li, x, usedTerms); ul.append(li); });
-      a.append(ul);
-    }
+    if (c.list.length) a.append(listEl('ucard-list', c.list, usedTerms));
     if (c.need) a.append(el('p', 'ucard-need', '用意するもの: ' + c.need));
     return a;
   }
@@ -2919,7 +2988,7 @@ a { color: inherit; }
     if (f) {
       const a = el('article', 'ucard');
       const meta = el('div', 'ucard-meta');
-      meta.append(el('span', 'ucard-tag', TM.title), el('b', 'ucard-title', f.name), el('span', 'ucard-tag', used.team.length ? '使用中のカード ' + used.team.length + '枚' : '基本の決まりだけ'));
+      meta.append(el('span', 'ucard-tag', TM.title), el('b', 'ucard-title', f.name), el('span', 'ucard-tag', used.team.length ? '使用中のカード ' + used.team.length + '枚' : f.own ? 'カードはまだ選んでいない' : '基本の決まりだけ'));
       a.append(ucardHead(meta, null, null));
       grid.append(a);
       usedTeam().forEach((c) => grid.append(ucard('team', c)));
@@ -3011,7 +3080,9 @@ a { color: inherit; }
   // ---------- チーム戦 ----------
   const teamItems = new Map();   // id → { c, card, btn, msg }
   let teamCols = 0;
-  const teamUsable = (c) => { const f = fmtNow(); return !!f && (!c.fmt.length || c.fmt.includes(f.id)); };
+  const teamUsable = (c) => fmtFits(c, fmtNow());
+  // 一度に引く枚数（pick のある形はその枚数。枚数の欄は出さない）
+  const teamN = () => { const f = fmtNow(); return f && f.pick ? f.pick : mstate.n; };
   const teamPool = () => TM.cards.filter((c) => teamUsable(c) && mstate.lv.includes(c.lv));
   const teamHand = () => (TM ? mstate.hand.map((id) => TM.byId.get(id)).filter(Boolean) : []);
   function teamRecent() {
@@ -3121,13 +3192,16 @@ a { color: inherit; }
       b.querySelector('.lv-count').textContent = TM.cards.filter((c) => c.lv === lv && teamUsable(c)).length + '種';
     }
     $('team-count-' + mstate.n).checked = true;
+    const f = fmtNow();
+    $('team-count-field').hidden = !!(f && f.pick);
+    const n = teamN();
     const k = teamPool().length;
     $('team-spin').disabled = k === 0;
     const line = $('team-pool-line');
     line.textContent = '';
     if (!k) line.append('いまの条件だと、引けるカードがないよ');
-    else if (k < mstate.n) line.append('いまの条件だと', el('b', null, String(k)), '種だけ。' + k + '枚まで引けるよ');
-    else line.append('いまの条件で', el('b', null, String(k)), '種から' + mstate.n + '枚引くよ');
+    else if (k < n) line.append('いまの条件だと', el('b', null, String(k)), '種だけ。' + k + '枚まで引けるよ');
+    else line.append('いまの条件で', el('b', null, String(k)), '種から' + n + '枚引くよ');
   }
   function renderTeamHand(opts) {
     opts = opts || {};
@@ -3178,6 +3252,13 @@ a { color: inherit; }
       const ul = $('team-base-list');
       ul.textContent = '';
       f.base.forEach((b) => ul.append(el('li', null, b)));
+      // own の形（ボス戦の型など）は、この形のカードを選んで遊ぶ。ボタンと空のときの文を変える
+      const spinLabel = f.own ? f.name + 'を引く' : TM.title + 'のカードを引く';
+      $('team-spin-label').textContent = spinLabel;
+      $('team-empty-lead').textContent = f.own ? (f.pick === 1 ? 'カードを1枚選んで遊ぶ形だよ。' : 'この形のカードを選んで遊ぶ形だよ。') : '基本の決まりだけで遊べるよ。';
+      $('team-empty-sub').textContent = f.own
+        ? '「' + spinLabel + '」で引くか、下の一覧から選んで「使用する」を押してね。'
+        : '決まりを足したいときは「' + spinLabel + '」。下の一覧からも、そのまま使用できるよ。';
       renderTeamSettings();
       renderTeamHand(opts);
       layoutTeamList();
@@ -3188,13 +3269,14 @@ a { color: inherit; }
   function spinTeam() {
     const cands = teamPool();
     if (!cands.length) { teamNotice('いまの条件だと引けるカードがないよ。難易度を増やしてみて'); return; }
-    const { picked, stale } = drawSet(cands, mstate.n, teamRecent(), []);
+    const n = teamN();
+    const { picked, stale } = drawSet(cands, n, teamRecent(), []);
     mstate.hand = picked.map((c) => c.id);
     pushTeamHist(mstate.hand);
     save();
     let msg = '';
-    if (picked.length < mstate.n) {
-      msg = cands.length < mstate.n && picked.length === cands.length
+    if (picked.length < n) {
+      msg = cands.length < n && picked.length === cands.length
         ? '条件に合うカードが' + cands.length + '種だけだから、' + picked.length + '枚引いたよ'
         : 'いっしょに使えるカードが足りなくて、' + picked.length + '枚だけ引いたよ';
     } else if (stale > 0) {
